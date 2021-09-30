@@ -17,3 +17,13 @@ This project uses the Standard Go Project Layout : https://github.com/golang-sta
 3. have a look to the code  in main.go file
 4. just run it : **go run main.go**
 5. hack-it, modify-it and have fun !
+
+## Useful Links
+- [Golang.org : home for the official project](https://golang.org/)
+- [A tour of Go is an interactive tour of Go ](https://tour.golang.org/)
+- [Go.dev a hub for Go developers](https://go.dev/)
+- [Learn Go with Tests](https://quii.gitbook.io/learn-go-with-tests/)
+- [Go by Example](https://gobyexample.com/)
+- [My golang learning](https://github.com/lao-tseu-is-alive/golang-learning)
+- 
+- 
