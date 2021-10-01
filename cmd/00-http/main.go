@@ -12,7 +12,7 @@ func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, helloMsg)
 }
 
-// your first golang web server
+// basic golang web server
 // to try it just type : go run main.go
 func main() {
 	listenAddr := ":8080"

@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TestHelloWorldHandler allows to check that the HelloWorldHandler works as expected
+// just run : go test
 func TestHelloWorldHandler(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/hello", nil)
 	response := httptest.NewRecorder()
