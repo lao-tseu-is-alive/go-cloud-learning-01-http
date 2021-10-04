@@ -21,12 +21,12 @@ func handleHello() http.HandlerFunc {
 // to try it just type : go run main.go
 func main() {
 	listenAddr := fmt.Sprintf(":%v", defaultPort)
-	// check ENV WEB_PORT for the good PORT TO USE
-	val, exist := os.LookupEnv("WEB_PORT")
+	// check ENV PORT for the good PORT TO USE
+	val, exist := os.LookupEnv("PORT")
 	if exist {
 		port, err := strconv.Atoi(val)
 		if err != nil {
-			log.Fatal("ERROR: WEB_PORT ENV should contain a valid integer value !")
+			log.Fatal("ERROR: PORT ENV should contain a valid integer value !")
 		}
 		listenAddr = fmt.Sprintf(":%v", port)
 	}

@@ -49,10 +49,11 @@ func getHelloMsg(name string) (string, error) {
 func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		// retrieve a parameter from query
+		// how to retrieve a parameter from query with standard library
 		query, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Bad request: Error in ParseQuery: %q", err), http.StatusBadRequest)
+			log.Printf("ERROR - Bad request. Error in ParseQuery. Error: %q . Request was: \n%#v\n", err, r)
+			http.Error(w, fmt.Sprintf("Bad request. Error in ParseQuery: %q", err), http.StatusBadRequest)
 			return
 		}
 		username := defaultUserName
@@ -61,16 +62,19 @@ func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		username = strings.TrimSpace(username)
 		if len(username) == 0 {
-			http.Error(w, fmt.Sprintf("Bad request: Error in query.Get('username'): username cannot be empty or spaces only"), http.StatusBadRequest)
+			log.Printf("ERROR - Bad request. Username cannot be empty. Request was: \n%#v\n", r)
+			http.Error(w, fmt.Sprintf("Bad request. In query.Get('username'): username cannot be empty or spaces only"), http.StatusBadRequest)
 			return
 		}
 		res, err := getHelloMsg(username)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Internal server error:%q", err), http.StatusInternalServerError)
+			log.Printf("ERROR - Internal server error. Request was: \n%#v\n", r)
+			http.Error(w, fmt.Sprintf("Internal server error. Error: %q", err), http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprintf(w, res)
 	default:
+		log.Printf("ERROR - Method not allowed. Request: %#v", r)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
@@ -79,16 +83,16 @@ func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 // the listening port to use from an environment  variable
 // and also
 // to try it just type 		: go run main.go
-// or with a different port :  WEB_PORT=3333 go run main.go
-// you can also try 		:  WEB_PORT=XXX3333 go run main.go
+// or with a different port :  PORT=3333 go run main.go
+// you can also try 		:  PORT=XXX3333 go run main.go
 func main() {
 	listenAddr := fmt.Sprintf(":%v", defaultPort)
-	// check ENV WEB_PORT for the PORT to use for listening to connection
-	val, exist := os.LookupEnv("WEB_PORT")
+	// check ENV PORT for the PORT to use for listening to connection
+	val, exist := os.LookupEnv("PORT")
 	if exist {
 		port, err := strconv.Atoi(val)
 		if err != nil {
-			log.Fatal("ERROR: WEB_PORT ENV should contain a valid integer value !")
+			log.Fatal("ERROR: CONFIG ENV PORT should contain a valid integer value !")
 		}
 		listenAddr = fmt.Sprintf(":%v", port)
 	}
@@ -102,6 +106,6 @@ func main() {
 	*/
 
 	http.HandleFunc("/hello", helloWorldHandler)
-	log.Printf("Starting server... try navigating to http://localhost%v/hello to be greeted", listenAddr)
+	log.Printf(" ### Starting server... try navigating to http://localhost%v/hello to be greeted", listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
