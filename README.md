@@ -25,5 +25,6 @@ This project uses the Standard Go Project Layout : https://github.com/golang-sta
 - [Learn Go with Tests](https://quii.gitbook.io/learn-go-with-tests/)
 - [Go by Example](https://gobyexample.com/)
 - [My golang learning](https://github.com/lao-tseu-is-alive/golang-learning)
+- [Why you should try Go as a PHP Developer(YouTube video)](https://www.youtube.com/watch?v=Mjcw8fHdx8Q)
 - 
 - 

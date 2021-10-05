@@ -60,6 +60,7 @@ curl -XPOST  http://localhost:8080/hello?username=Rob%20Pike
 curl -XPOST -d '{"username":"toto"}' http://localhost:8080/hello?username=Rob%20Pike
 curl -XPUT -d '{"username":"toto"}' http://localhost:8080/1234
 # what appears in the log for the last line ?
+# we are using the default Mux of GO http, so for now we have no code to intercept this call
 
 ```
 
@@ -70,7 +71,7 @@ go build -o mywebserver main.go
 
 to unit test the handler just type, by the way have a look at the main_test.go code :
 ```bash
-go test 
+go test -v 
 ```
 
 to check on your server which process is listening on a specific port :

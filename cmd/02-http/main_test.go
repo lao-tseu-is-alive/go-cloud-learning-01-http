@@ -6,11 +6,13 @@ import (
 	"testing"
 )
 
-// TestHelloWorldHandler allows to check that the HelloWorldHandler works as expected
-// just run : go test
-func TestHelloWorldHandler(t *testing.T) {
+// TestHelloHandler allows to check that the HelloWorldHandler works as expected
+// just run : go test -race -covermode=atomic -coverprofile=coverage.out
+func TestHelloHandler(t *testing.T) {
 
 	defaultMsg, _ := getHelloMsg(defaultUserName)
+
+	helloHandler := getHelloHandler()
 
 	tt := []struct {
 		name           string
@@ -51,7 +53,7 @@ func TestHelloWorldHandler(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			request, _ := http.NewRequest(tc.method, "/hello", nil)
+			request, _ := http.NewRequest(tc.method, "/", nil)
 			username := ""
 			if len(tc.paramKeyValues) > 0 {
 				parameters := request.URL.Query()
@@ -64,7 +66,7 @@ func TestHelloWorldHandler(t *testing.T) {
 				request.URL.RawQuery = parameters.Encode()
 			}
 			response := httptest.NewRecorder()
-			helloWorldHandler(response, request)
+			helloHandler(response, request)
 			got := response.Body.String()
 			want := tc.want
 			if len(want) == 0 {

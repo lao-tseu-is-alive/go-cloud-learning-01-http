@@ -81,7 +81,7 @@ func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 // let's improve our http server : we will allow it to read
 // the listening port to use from an environment  variable
-// and also
+// and also use html/template to return a personalised html greeting
 // to try it just type 		: go run main.go
 // or with a different port :  PORT=3333 go run main.go
 // you can also try 		:  PORT=XXX3333 go run main.go
