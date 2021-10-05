@@ -1,8 +1,11 @@
 package main
 
 import (
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -11,8 +14,10 @@ import (
 func TestHelloHandler(t *testing.T) {
 
 	defaultMsg, _ := getHelloMsg(defaultUserName)
-
-	helloHandler := getHelloHandler()
+	l := log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
+	l.SetOutput(ioutil.Discard)
+	server := NewGoHttpServer(defaultServerIp, defaultServerPort, l)
+	server.StartServer()
 
 	tt := []struct {
 		name           string
@@ -22,32 +27,47 @@ func TestHelloHandler(t *testing.T) {
 		statusCode     int
 	}{
 		{
-			name:           "without any username parameter",
+			name:           "without any username parameter, we want default message",
 			method:         http.MethodGet,
 			paramKeyValues: make(map[string]string, 0),
 			want:           defaultMsg,
 			statusCode:     http.StatusOK,
 		},
 		{
-			name:           "with username having a valid value",
+			name:           "with username having a valid value, we want greeting with username",
 			method:         http.MethodGet,
 			paramKeyValues: map[string]string{"username": "Carlos"},
 			want:           "", // let's calculate the result later based on given userName
 			statusCode:     http.StatusOK,
 		},
 		{
-			name:           "with username having an empty value",
+			name:           "with username having an empty value, we want 400 Bad request",
 			method:         http.MethodGet,
 			paramKeyValues: map[string]string{"username": ""},
 			want:           "Bad request. In query.Get('username'): username cannot be empty or spaces only\n",
 			statusCode:     http.StatusBadRequest,
 		},
 		{
-			name:           "with bad method",
+			name:           "with unsupported http method, we want 405 Method not allowed",
 			method:         http.MethodPost,
 			paramKeyValues: map[string]string{"username": "WhatEverYouWant", "param2": "nobody is here"},
 			want:           "Method not allowed\n",
 			statusCode:     http.StatusMethodNotAllowed,
+		},
+		// for next test to pass we need to test the server not only the handler
+		{
+			name:           "with invalid query, we want 400 Bad request",
+			method:         http.MethodGet,
+			paramKeyValues: map[string]string{"username": "WhatEverYouWant", "param2": "nobody; is here"},
+			want:           "Bad request. Error in ParseQuery",
+			statusCode:     http.StatusBadRequest,
+		},
+		{
+			name:           "with nonexistent url query,we want 404 page not found",
+			method:         http.MethodGet,
+			paramKeyValues: map[string]string{"username": "WhatEverYouWant", "param2": "nobody; is here"},
+			want:           "Bad request. Error in ParseQuery",
+			statusCode:     http.StatusNotFound,
 		},
 	}
 
@@ -66,7 +86,7 @@ func TestHelloHandler(t *testing.T) {
 				request.URL.RawQuery = parameters.Encode()
 			}
 			response := httptest.NewRecorder()
-			helloHandler(response, request)
+			server.router.ServeHTTP(response, request)
 			got := response.Body.String()
 			want := tc.want
 			if len(want) == 0 {
