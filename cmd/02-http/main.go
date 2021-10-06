@@ -18,14 +18,19 @@ import (
 const (
 	defaultServerPort   = 8080
 	defaultServerIp     = "127.0.0.1"
+	defaultServerPath   = "/"
 	shutDownTimeout     = 15 * time.Second // number of second to wait before closing server
-	defaultReadTimeout  = 2 * time.Minute
-	defaultWriteTimeout = 2 * time.Minute
-	defaultIdleTimeout  = 2 * time.Minute
-	defaultUserName     = "World"
+	defaultReadTimeout  = 2 * time.Minute  // max time to read request from the client
+	defaultWriteTimeout = 2 * time.Minute  // max time to write response to the client
+	defaultIdleTimeout  = 2 * time.Minute  // max time for connections using TCP Keep-Alive
+	defaultUserName     = "𝕎𝕠𝕣𝕝𝕕"
+	defaultMessage      = "🅆🄴🄻🄲🄾🄼🄴 🄷🄾🄼🄴 🏠"
+	defaultNotFound     = "🤔 ℍ𝕞𝕞... 𝕤𝕠𝕣𝕣𝕪 :【𝟜𝟘𝟜 : ℙ𝕒𝕘𝕖 ℕ𝕠𝕥 𝔽𝕠𝕦𝕟𝕕】🕳️ 🔥"
 	secondsToSleep      = 5
+	htmlHeaderStart     = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css"/>`
 )
 
+//getListenAddrFromEnv returns a valid TCP/IP listening address string based on the values of ENV SERVERIP:PORT
 func getListenAddrFromEnv(defaultIP string, defaultPort int) string {
 	srvIP := defaultIP
 	srvPort := defaultPort
@@ -44,6 +49,7 @@ func getListenAddrFromEnv(defaultIP string, defaultPort int) string {
 	return fmt.Sprintf("%s:%d", srvIP, srvPort)
 }
 
+//GoHttpServer is a struct type to store information related to all handlers of web server
 type GoHttpServer struct {
 	listenAddress string
 	// later we will store here the connection to database
@@ -52,6 +58,8 @@ type GoHttpServer struct {
 	router *http.ServeMux
 }
 
+//NewGoHttpServer is a constructor that initializes the server mux (routes) and all fields of the  GoHttpServer type
+//
 func NewGoHttpServer(ServerIpDefault string, ServerPortDefault int, logger *log.Logger) *GoHttpServer {
 	listenAddress := getListenAddrFromEnv(ServerIpDefault, ServerPortDefault)
 	myServer := GoHttpServer{
@@ -63,6 +71,7 @@ func NewGoHttpServer(ServerIpDefault string, ServerPortDefault int, logger *log.
 	return &myServer
 }
 
+// (*GoHttpServer) routes initializes all the handlers paths of this web server, it is called inside the NewGoHttpServer constructor
 func (s *GoHttpServer) routes() {
 	s.router.Handle("/", s.getMyDefaultHandler())
 	s.router.Handle("/hello", s.getHelloHandler())
@@ -119,23 +128,19 @@ func (s *GoHttpServer) StartServer() {
 
 }
 
+func getHtmlHeader(title string) string {
+	return fmt.Sprintf("%s<title>%s</title></head>", htmlHeaderStart, title)
+}
+
+func getHtmlPage(title string) string {
+	return getHtmlHeader(title) +
+		fmt.Sprintf("\n<body><div class=\"container\"><h3>%s</h3></div></body></html>", title)
+}
+
 func getHelloMsg(name string) (string, error) {
-	const helloMsg = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-	<link rel="stylesheet" 
-		href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css"
-		integrity="sha512-EZLkOqwILORob+p0BXZc+Vm3RgJBOe1Iq/0fiI7r/wJgzOFZMlsqTa29UEl6v6U6gsV4uIpsNZoV32YZqrCRCQ==" 
-		crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <title>GOLANG Hello {{.UserName}}</title>
-  </head>
-  <body>
-	<h3>Hello, {{.UserName}}!</h3>
-  </body>
-</html>
-`
+	const helloMsg = htmlHeaderStart +
+		`<title>𝙂𝙤 𝙃𝙚𝙡𝙡𝙤 {{.UserName}} 👋 🖖 🫂</title></head>
+<body><div class="container"><h3>ℍ𝕖𝕝𝕝𝕠, {{.UserName}} 👋 🖖 🫂 </h3></div></body></html>`
 
 	data := struct {
 		UserName string
@@ -165,7 +170,7 @@ func (s *GoHttpServer) getHelloHandler() http.HandlerFunc {
 			// how to retrieve a parameter from query with standard library
 			query, err := url.ParseQuery(r.URL.RawQuery)
 			if err != nil {
-				s.logger.Printf("ERROR: Bad request. Error in ParseQuery. Error: %q . Request was: \n%#v\n", err, r)
+				s.logger.Printf("ERROR:[HelloHandler] Bad request. Error in ParseQuery. Error: %q . Request was: \n%#v\n", err, r)
 				http.Error(w, fmt.Sprintf("Bad request. Error in ParseQuery: %q", err), http.StatusBadRequest)
 				return
 			}
@@ -175,22 +180,23 @@ func (s *GoHttpServer) getHelloHandler() http.HandlerFunc {
 			}
 			username = strings.TrimSpace(username)
 			if len(username) == 0 {
-				s.logger.Printf("ERROR: Bad request. Username cannot be empty. Request was: \n%#v\n", r)
+				s.logger.Printf("ERROR:[HelloHandler] Bad request. Username cannot be empty. Request was: \n%#v\n", r)
 				http.Error(w, fmt.Sprintf("Bad request. In query.Get('username'): username cannot be empty or spaces only"), http.StatusBadRequest)
 				return
 			}
 			res, err := getHelloMsg(username)
 			if err != nil {
-				s.logger.Printf("ERROR: Internal server error. Request was: \n%#v\n", r)
+				s.logger.Printf("ERROR:[HelloHandler] Internal server error. Request was: \n%#v\n", r)
 				http.Error(w, fmt.Sprintf("Internal server error. Error: %q", err), http.StatusInternalServerError)
 				return
 			}
 			n, err := fmt.Fprintf(w, res)
 			if err != nil {
-				s.logger.Printf("ERROR: helloHandler was unable to Fprintf. requestURI:'%s', from IP: [%s], send_bytes:%d\n", requestedUrl, remoteIp, n)
+				s.logger.Printf("ERROR:[HelloHandler] was unable to Fprintf. requestURI:'%s', from IP: [%s], send_bytes:%d\n", requestedUrl, remoteIp, n)
 				http.Error(w, "Internal server error. myDefaultHandler was unable to Fprintf", http.StatusInternalServerError)
 				return
 			}
+			s.logger.Printf("SUCCESS:[HelloHandler]  requestURI:'%s', from IP: [%s], send_bytes:%d\n", requestedUrl, remoteIp, n)
 		default:
 			s.logger.Printf("ERROR - Method not allowed. Request: %#v", r)
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -202,17 +208,28 @@ func (s *GoHttpServer) getMyDefaultHandler() http.HandlerFunc {
 	s.logger.Println("INITIAL CALL TO getMyDefaultHandler()")
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteIp := r.RemoteAddr
-		requestedUrl := r.RequestURI
-		s.logger.Printf("TRACE:[myDefaultHandler] %s  requestURI:'%s', from IP: [%s]\n", r.Method, requestedUrl, remoteIp)
+		requestedUrlPath := r.URL.Path
+		s.logger.Printf("TRACE:[myDefaultHandler] %s  path:'%s', from IP: [%s]\n", r.Method, requestedUrlPath, remoteIp)
 		switch r.Method {
 		case http.MethodGet:
-			n, err := fmt.Fprintf(w, "myDefaultHandler requestURI:'%s', from IP: [%s]\n", requestedUrl, remoteIp)
-			if err != nil {
-				s.logger.Printf("ERROR:[myDefaultHandler] was unable to Fprintf. requestURI:'%s', from IP: [%s], send_bytes:%d\n", requestedUrl, remoteIp, n)
-				http.Error(w, "Internal server error. myDefaultHandler was unable to Fprintf", http.StatusInternalServerError)
-				return
+			if len(strings.TrimSpace(requestedUrlPath)) == 0 || requestedUrlPath == defaultServerPath {
+				log.Printf("DEBUG getMyDefaultHandler requested Path %#v\n", requestedUrlPath)
+				n, err := fmt.Fprintf(w, getHtmlPage(defaultMessage))
+				if err != nil {
+					s.logger.Printf("ERROR:[myDefaultHandler] was unable to Fprintf. path:'%s', from IP: [%s], send_bytes:%d\n", requestedUrlPath, remoteIp, n)
+					http.Error(w, "Internal server error. myDefaultHandler was unable to Fprintf", http.StatusInternalServerError)
+					return
+				}
+				s.logger.Printf("SUCCESS:[myDefaultHandler]  path:'%s', from IP: [%s], send_bytes:%d\n", requestedUrlPath, remoteIp, n)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+				n, err := fmt.Fprintf(w, getHtmlPage(defaultNotFound))
+				if err != nil {
+					s.logger.Printf("ERROR:[myDefaultHandler] Not Found was unable to Fprintf. path:'%s', from IP: [%s], send_bytes:%d\n", requestedUrlPath, remoteIp, n)
+					http.Error(w, "Internal server error. myDefaultHandler was unable to Fprintf", http.StatusInternalServerError)
+					return
+				}
 			}
-			s.logger.Printf("SUCCESS:[myDefaultHandler]  requestURI:'%s', from IP: [%s], send_bytes:%d\n", requestedUrl, remoteIp, n)
 		default:
 			s.logger.Printf("ERROR: Method not allowed. Request: %#v", r)
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -245,11 +262,25 @@ func (s *GoHttpServer) getSlowHelloHandler() http.HandlerFunc {
 }
 
 func main() {
-	server := NewGoHttpServer(
-		defaultServerIp,
-		defaultServerPort,
-		log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile),
-	)
+
+	/* example code to log inside a file instead of stdout
+	const logFilename = "server.log"
+	f, err := os.OpenFile(logFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("FATAL ERROR : Unable to open log file : %s for writing. Error : %s", logFilename, err)
+	}
+	defer f.Close()
+	l := log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
+	*/
+
+	// ioutil.Discard(https://golang.org/pkg/io/ioutil/#pkg-variables)
+	// ioutil.Discard is a writer on which all calls succeed without doing anything.
+	//l := log.New(ioutil.Discard, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
+	// you can also disable output for the logger anytime by doing a simple
+	//l.SetOutput(ioutil.Discard)
+
+	l := log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
+	server := NewGoHttpServer(defaultServerIp, defaultServerPort, l)
 	server.StartServer()
 
 }

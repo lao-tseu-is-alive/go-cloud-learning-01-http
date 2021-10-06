@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// TestHelloWorldHandler allows to check that the HelloWorldHandler works as expected
-// just run : go test
-func TestHelloWorldHandler(t *testing.T) {
+// TestHelloHandler allows to check that the HelloWorldHandler works as expected
+// just run : go test -race -covermode=atomic -coverprofile=coverage.out
+func TestHelloHandler(t *testing.T) {
 
 	defaultMsg, _ := getHelloMsg(defaultUserName)
 
@@ -20,28 +20,28 @@ func TestHelloWorldHandler(t *testing.T) {
 		statusCode     int
 	}{
 		{
-			name:           "without any username parameter",
+			name:           "without any username parameter, we want default message",
 			method:         http.MethodGet,
 			paramKeyValues: make(map[string]string, 0),
 			want:           defaultMsg,
 			statusCode:     http.StatusOK,
 		},
 		{
-			name:           "with username having a valid value",
+			name:           "with username having a valid value, we want greeting with username",
 			method:         http.MethodGet,
 			paramKeyValues: map[string]string{"username": "Carlos"},
 			want:           "", // let's calculate the result later based on given userName
 			statusCode:     http.StatusOK,
 		},
 		{
-			name:           "with username having an empty value",
+			name:           "with username having an empty value, we want 400 Bad request",
 			method:         http.MethodGet,
 			paramKeyValues: map[string]string{"username": ""},
 			want:           "Bad request. In query.Get('username'): username cannot be empty or spaces only\n",
 			statusCode:     http.StatusBadRequest,
 		},
 		{
-			name:           "with bad method",
+			name:           "with unsupported http method, we want 405 Method not allowed",
 			method:         http.MethodPost,
 			paramKeyValues: map[string]string{"username": "WhatEverYouWant", "param2": "nobody is here"},
 			want:           "Method not allowed\n",
