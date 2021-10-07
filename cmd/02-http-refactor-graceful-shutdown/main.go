@@ -49,6 +49,35 @@ func getListenAddrFromEnv(defaultIP string, defaultPort int) string {
 	return fmt.Sprintf("%s:%d", srvIP, srvPort)
 }
 
+func getHtmlHeader(title string) string {
+	return fmt.Sprintf("%s<title>%s</title></head>", htmlHeaderStart, title)
+}
+
+func getHtmlPage(title string) string {
+	return getHtmlHeader(title) +
+		fmt.Sprintf("\n<body><div class=\"container\"><h3>%s</h3></div></body></html>", title)
+}
+
+func getHelloMsg(name string) (string, error) {
+	const helloMsg = htmlHeaderStart +
+		`<title>𝙂𝙤 𝙃𝙚𝙡𝙡𝙤 {{.UserName}} 👋 🖖 🫂</title></head>
+<body><div class="container"><h3>ℍ𝕖𝕝𝕝𝕠, {{.UserName}} 👋 🖖 🫂 </h3></div></body></html>`
+
+	data := struct {
+		UserName string
+	}{UserName: name}
+	var tpl bytes.Buffer
+	t, err := template.New("hello-page").Parse(helloMsg)
+	if err != nil {
+		return "", err
+	}
+	if err := t.Execute(&tpl, data); err != nil {
+		return "", err
+	}
+
+	return tpl.String(), nil
+}
+
 //GoHttpServer is a struct type to store information related to all handlers of web server
 type GoHttpServer struct {
 	listenAddress string
@@ -59,7 +88,6 @@ type GoHttpServer struct {
 }
 
 //NewGoHttpServer is a constructor that initializes the server mux (routes) and all fields of the  GoHttpServer type
-//
 func NewGoHttpServer(ServerIpDefault string, ServerPortDefault int, logger *log.Logger) *GoHttpServer {
 	listenAddress := getListenAddrFromEnv(ServerIpDefault, ServerPortDefault)
 	myServer := GoHttpServer{
@@ -78,6 +106,7 @@ func (s *GoHttpServer) routes() {
 	s.router.Handle("/slowHello", s.getSlowHelloHandler())
 }
 
+// StartServer initializes all the handlers paths of this web server, it is called inside the NewGoHttpServer constructor
 func (s *GoHttpServer) StartServer() {
 
 	// create a new http server
@@ -126,35 +155,6 @@ func (s *GoHttpServer) StartServer() {
 	//ctx, _ := context.WithTimeout(context.Background(), shutDownTimeout)
 	//srv.Shutdown(ctx)
 
-}
-
-func getHtmlHeader(title string) string {
-	return fmt.Sprintf("%s<title>%s</title></head>", htmlHeaderStart, title)
-}
-
-func getHtmlPage(title string) string {
-	return getHtmlHeader(title) +
-		fmt.Sprintf("\n<body><div class=\"container\"><h3>%s</h3></div></body></html>", title)
-}
-
-func getHelloMsg(name string) (string, error) {
-	const helloMsg = htmlHeaderStart +
-		`<title>𝙂𝙤 𝙃𝙚𝙡𝙡𝙤 {{.UserName}} 👋 🖖 🫂</title></head>
-<body><div class="container"><h3>ℍ𝕖𝕝𝕝𝕠, {{.UserName}} 👋 🖖 🫂 </h3></div></body></html>`
-
-	data := struct {
-		UserName string
-	}{UserName: name}
-	var tpl bytes.Buffer
-	t, err := template.New("hello-page").Parse(helloMsg)
-	if err != nil {
-		return "", err
-	}
-	if err := t.Execute(&tpl, data); err != nil {
-		return "", err
-	}
-
-	return tpl.String(), nil
 }
 
 func (s *GoHttpServer) getHelloHandler() http.HandlerFunc {
