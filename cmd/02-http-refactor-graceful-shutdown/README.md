@@ -162,3 +162,5 @@ ss -lntp
 ### More information :
 - [Go http server Shutdown](https://pkg.go.dev/net/http#Server.Shutdown)
 - [Graceful shutdown in Go http server](https://medium.com/honestbee-tw-engineer/gracefully-shutdown-in-go-http-server-5f5e6b83da5a)
+- [Logging in Go: Choosing a System and Using it](https://www.honeybadger.io/blog/golang-logging/)
+- [The http.Handler wrapper technique in GO](https://medium.com/@matryer/the-http-handler-wrapper-technique-in-golang-updated-bc7fbcffa702)

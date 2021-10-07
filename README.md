@@ -24,7 +24,8 @@ This project uses the Standard Go Project Layout : https://github.com/golang-sta
 - [Go.dev a hub for Go developers](https://go.dev/)
 - [Learn Go with Tests](https://quii.gitbook.io/learn-go-with-tests/)
 - [Go by Example](https://gobyexample.com/)
+- [Golang tutorial and examples](https://www.golangprograms.com/golang-package-examples.html)
 - [My golang learning](https://github.com/lao-tseu-is-alive/golang-learning)
 - [Why you should try Go as a PHP Developer(YouTube video)](https://www.youtube.com/watch?v=Mjcw8fHdx8Q)
-- 
+- [How I write HTTP services after eight years by Mat Ryer](https://pace.dev/blog/2018/05/09/how-I-write-http-services-after-eight-years.html)
 - 
