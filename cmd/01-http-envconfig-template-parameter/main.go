@@ -45,7 +45,7 @@ func getHelloMsg(name string) (string, error) {
 	return tpl.String(), nil
 }
 
-// helloWorldHandler is a simple http handler to give some greetings with a valid html
+// helloWorldHandler is a simple http handler to give some personalised greetings with a valid html
 func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
