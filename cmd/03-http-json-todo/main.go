@@ -16,6 +16,8 @@ type memoryStore struct {
 	Lock  sync.Mutex
 }
 
+var DBinMemory memoryStore
+
 type goTodoServer struct {
 	data   *memoryStore
 	logger *log.Logger
@@ -39,6 +41,12 @@ func (s goTodoServer) CreateTodo(ctx echo.Context) error {
 	newTodo := &NewTodo{Task: ""}
 	if err := ctx.Bind(newTodo); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("CreateTodo has invalid format [%v]", err))
+	}
+	if len(newTodo.Task) < 1 {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task cannot be empty"))
+	}
+	if len(newTodo.Task) < 6 {
+		return echo.NewHTTPError(http.StatusOK, fmt.Sprint("CreateTodo task minLength is 5"))
 	}
 	s.logger.Printf("# CreateTodo() newTodo : %#v\n", newTodo)
 	t.Task = newTodo.Task
@@ -77,12 +85,12 @@ func (s goTodoServer) UpdateTodo(ctx echo.Context, todoId int32) error {
 	return ctx.JSON(http.StatusOK, t)
 }
 
-func main() {
-	l := log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
-	// initialize some dummy data to get some results back
+// initializeStorage initialize some dummy data to get some results back
+func initializeStorage() memoryStore {
+
 	someTimeCreated, _ := time.Parse(time.RFC3339, "2020-02-21T08:00:23.877Z")
 	someTimeCompleted, _ := time.Parse(time.RFC3339, "2021-10-07T15:02:23.877Z")
-	myMemoryStore := memoryStore{
+	return memoryStore{
 		Todos: map[int32]*Todo{
 			1: {
 				Completed:   true,
@@ -102,7 +110,12 @@ func main() {
 		IdSeq: 3,
 		Lock:  sync.Mutex{},
 	}
-	myApi := goTodoServer{logger: l, data: &myMemoryStore}
+}
+
+func main() {
+	l := log.New(os.Stdout, "hello-api_", log.Ldate|log.Ltime|log.Lshortfile)
+	DBinMemory = initializeStorage()
+	myApi := goTodoServer{logger: l, data: &DBinMemory}
 	e := echo.New()
 	RegisterHandlers(e, &myApi)
 

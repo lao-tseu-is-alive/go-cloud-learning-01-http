@@ -1,12 +1,15 @@
 ## Let's make your first Go API with a classical TODO
 
-In this next iteration of our hello web server we will introduce those features:
+Congratulations, now you will learn how to write your first MicroServices. 
+For education purposes it will be a basic TODO app with data stored in memory.
+But in the process you will grasp some new concepts
 
-1. Refactor the code using dedicated struct type to store information related to all handlers of web server
-2. Implement graceful shuts down the server without interrupting any active connections.
-3. Implement a default handler to intercepts and handle all request to nonexistent endpoints.
-4. Learn how to configure and use a logger
 
+ 1. From now on, we will start using [Echo](https://echo.labstack.com/) as web framework.
+ 2. We will use [Go Modules](https://github.com/golang/go/wiki/Modules) dependency manager
+ 3. We will introduce the concept of Contract based API using [OpenApi 3.0](https://github.com/OAI/OpenAPI-Specification) specification
+ 4. We will see  the [online swagger editor](https://editor.swagger.io/) to create/edit/validate OpenAPI 3 specifications
+ 5. We will generate code based on the OpenAPi specification using [oapi-codegen](https://github.com/deepmap/oapi-codegen)
 
 ### Install the tools and dependency
 
@@ -20,16 +23,16 @@ cd ~
 #download the oapi-codegen
 go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen
 ```
-Now come back to your source code, where you made
-Because I have **already done** at the beginning of the project a mod init
+Now come back to your source code tree.
+Because I have **already done** at the beginning of this project a mod init :
 
 *go mod github.com/lao-tseu-is-alive/go-cloud-learning-01-http*
 
+you don't need to run this command in this project
 you have already a file called "mod.go" in the base directory of this project.
 
 This file keep track of all your external Go dependencies. 
-
-
+Just run the next command to install the dependencies locally.
 ```bash
 #go to your source code directory first (where the go.mod is) 
 cd -
@@ -39,7 +42,13 @@ go mod download
 
 
 ### What to remember :
-- It is important to handle graceful shutdown for long queries to close cleanly
+- Design your API specification first and have the spec.yaml or spec.json in your code repository
+- Try to follow the [REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md) as much as possible
+- Be consistent in all your API definition.
+- Generate the Go server and types from your OpenApi spec, use them as is, **DO NOT EDIT THEM !**
+- Use low revision number of your API if you extend or add new path. 
+- Use New major version if you introduce breaking changes in your API (remove or change something)
+- 
 
 ```go
 
