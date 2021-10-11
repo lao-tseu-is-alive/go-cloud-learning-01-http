@@ -13,43 +13,37 @@ import (
 
 const defaultMaxId = 2
 
-var (
-	someTimeCreated, _   = time.Parse(time.RFC3339, "2020-02-21T08:00:23.877Z")
-	someTimeCompleted, _ = time.Parse(time.RFC3339, "2021-10-07T15:02:23.877Z")
-	defaultInitialData   = map[int32]*Todo{
-		1: {
-			Completed:   true,
-			CompletedAt: &someTimeCompleted,
-			CreatedAt:   &someTimeCreated,
-			Id:          1,
-			Task:        "Learn GO",
-		},
-		2: {
-			Completed:   false,
-			CompletedAt: nil,
-			CreatedAt:   &someTimeCreated,
-			Id:          2,
-			Task:        "Learn OpenAPI",
-		},
-	}
-)
-
 type memoryStore struct {
 	Todos map[int32]*Todo
 	maxId int32
 	lock  sync.RWMutex
 }
 
-var DBinMemory memoryStore
-
 type goTodoServer struct {
 	data   *memoryStore
 	logger *log.Logger
 }
 
-//GetTodos will retreive all Todo task in the store and return then
+// GetMaxId returns the greatest todos id used by now
+// curl -H "Content-Type: application/json" 'http://localhost:8080/todos/maxid'
+func (s goTodoServer) GetMaxId(ctx echo.Context) error {
+	s.logger.Println("# Entering GetMaxId()")
+	var maxTodoId int32 = 0
+	s.data.lock.RLock()
+	defer s.data.lock.RUnlock()
+	for myTodoId, _ := range s.data.Todos {
+		if myTodoId > maxTodoId {
+			maxTodoId = myTodoId
+		}
+	}
+	s.logger.Printf("# Exit GetMaxId() maxTodoId: %d", maxTodoId)
+	return ctx.JSON(http.StatusOK, maxTodoId)
+}
+
+//GetTodos will retrieve all Todos in the store and return then
 //to test it with curl you can try :
 //curl -H "Content-Type: application/json" 'http://localhost:8080/todos' |json_pp
+
 func (s goTodoServer) GetTodos(ctx echo.Context, params GetTodosParams) error {
 	s.logger.Println("# Entering GetTodos()")
 	s.data.lock.RLock()
@@ -59,12 +53,14 @@ func (s goTodoServer) GetTodos(ctx echo.Context, params GetTodosParams) error {
 
 //CreateTodo will store the NewTodo task in the store
 //to test it with curl you can try :
-//curl -XPOST -H "Content-Type: application/json" -d '{"task":"learn Linux2"}'  'http://localhost:8080/todos'
+//curl -XPOST -H "Content-Type: application/json" -d '{"task":"learn Linux"}'  'http://localhost:8080/todos'
+//curl -XPOST -H "Content-Type: application/json" -d '{"task":""}'  'http://localhost:8080/todos'
 func (s goTodoServer) CreateTodo(ctx echo.Context) error {
 	s.logger.Println("# Entering CreateTodo()")
 	s.data.lock.Lock()
 	defer s.data.lock.Unlock()
 	now := time.Now()
+	s.data.maxId++
 	t := &Todo{
 		Id:        s.data.maxId,
 		CreatedAt: &now,
@@ -83,7 +79,6 @@ func (s goTodoServer) CreateTodo(ctx echo.Context) error {
 	t.Task = newTodo.Task
 	s.logger.Printf("# CreateTodo() Todo %#v\n", t)
 	s.data.Todos[t.Id] = t
-	s.data.maxId++
 	return ctx.JSON(http.StatusCreated, t)
 
 }
@@ -94,7 +89,7 @@ func (s goTodoServer) CreateTodo(ctx echo.Context) error {
 func (s goTodoServer) DeleteTodo(ctx echo.Context, todoId int32) error {
 	s.logger.Printf("# Entering DeleteTodo(%d)", todoId)
 	if s.data.Todos[todoId] == nil {
-		return ctx.NoContent(http.StatusBadRequest)
+		return ctx.NoContent(http.StatusNotFound)
 	} else {
 		s.data.lock.Lock()
 		defer s.data.lock.Unlock()
@@ -105,10 +100,11 @@ func (s goTodoServer) DeleteTodo(ctx echo.Context, todoId int32) error {
 
 // UpdateTodo will store the modified information in the store for the given todoId
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": true}'  'http://localhost:8080/todos/3'
+// curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": false}'  'http://localhost:8080/todos/3'
 func (s goTodoServer) UpdateTodo(ctx echo.Context, todoId int32) error {
 	s.logger.Printf("# Entering UpdateTodo(%d)", todoId)
 	if s.data.Todos[todoId] == nil {
-		return ctx.NoContent(http.StatusBadRequest)
+		return ctx.NoContent(http.StatusNotFound)
 	}
 	s.data.lock.Lock()
 	defer s.data.lock.Unlock()
@@ -116,12 +112,56 @@ func (s goTodoServer) UpdateTodo(ctx echo.Context, todoId int32) error {
 	if err := ctx.Bind(t); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("UpdateTodo has invalid format [%v]", err))
 	}
+	if len(t.Task) < 1 {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task cannot be empty"))
+	}
+	if len(t.Task) < 6 {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task minLength is 5"))
+	}
+	existingTodo := s.data.Todos[todoId]
+	now := time.Now()
+	// cannot override CreatedAt fields
+	t.CreatedAt = existingTodo.CreatedAt
+	switch t.Completed {
+	case true:
+		if existingTodo.Completed == false {
+			t.CompletedAt = &now
+		}
+	case false:
+		if existingTodo.Completed == true {
+			// task was completed, but user changed it to not completed
+			t.CompletedAt = nil
+		}
+	// in all other cases the value of CompletedAt should not be changed
+	default:
+		t.CompletedAt = existingTodo.CompletedAt
+	}
+
 	s.data.Todos[todoId] = t
 	return ctx.JSON(http.StatusOK, t)
 }
 
 // initializeStorage initialize some dummy data to get some results back
 func initializeStorage() memoryStore {
+
+	someTimeCreated, _ := time.Parse(time.RFC3339, "2020-02-21T08:00:23.877Z")
+	someTimeCompleted, _ := time.Parse(time.RFC3339, "2021-10-07T15:02:23.877Z")
+	defaultInitialData := map[int32]*Todo{
+		1: {
+			Completed:   true,
+			CompletedAt: &someTimeCompleted,
+			CreatedAt:   &someTimeCreated,
+			Id:          1,
+			Task:        "Learn GO",
+		},
+		2: {
+			Completed:   false,
+			CompletedAt: nil,
+			CreatedAt:   &someTimeCreated,
+			Id:          2,
+			Task:        "Learn OpenAPI",
+		},
+	}
 
 	return memoryStore{
 		Todos: defaultInitialData,
@@ -142,6 +182,8 @@ func getNewServer(discardLog bool) *echo.Echo {
 	myApi := goTodoServer{logger: l, data: &DBinMemory}
 	e := echo.New()
 	RegisterHandlers(e, &myApi)
+	// add a route for maxId
+	e.GET("/todos/maxid", myApi.GetMaxId)
 	return e
 }
 

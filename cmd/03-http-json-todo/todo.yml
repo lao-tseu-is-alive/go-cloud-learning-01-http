@@ -134,11 +134,13 @@ paths:
                   type: boolean
       responses:
         '200':
-          description: get todo's response
+          description: put todo's succesfull response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Todo'
+        '404':
+          description: delete todo's when todoId was not found
         default:
           description: unexpected error
           content:
@@ -158,7 +160,9 @@ paths:
             format: int32
       responses:
         '204':
-          description: no content
+          description: delete todo's succesfull no content
+        '404':
+            description: delete todo's when todoId was not found
         default:
           description: unexpected error
           content:
