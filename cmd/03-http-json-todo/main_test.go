@@ -223,6 +223,7 @@ func Test_goTodoServer_Todos(t *testing.T) {
 					fmt.Printf("WANTED   :%T - %#v\n", tt.wantBody, tt.wantBody)
 					fmt.Printf("RECEIVED :%T - %#v\n", receivedJson, string(receivedJson))
 				}
+				// check that receivedJson contains the specified tt.wantBody substring . https://pkg.go.dev/github.com/stretchr/testify/assert#Contains
 				assert.Contains(t, string(receivedJson), tt.wantBody, "CreateTodo Response contains what was expected.")
 			}
 		})

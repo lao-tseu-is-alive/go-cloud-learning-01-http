@@ -67,5 +67,5 @@ PORT=3333 go run main.go
 ### More information :
 - [OpenAPI-Specification](https://github.com/OAI/OpenAPI-Specification)
 - [Golang Server code generation from OpenAPI Specification](https://medium.com/sellerapp/golang-server-code-generation-from-openapi-specification-5b4e5aa7cee)
-- [go-swagger : Todo List Tutorial old OPENAPI 2.0](https://github.com/go-swagger/go-swagger/blob/master/docs/tutorial/todo-list.md)
+- [Swagger Editor](https://editor.swagger.io/)
 - 
