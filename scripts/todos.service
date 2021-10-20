@@ -1,0 +1,18 @@
+[Unit]
+Description=systemd service unit for the TODOS example in Golang by CGIL
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=todos
+Group=todos
+RestartSec=2s
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/todosServer  2>&1  /var/log/todos/todos_systemd_service.log
+
+SyslogIdentifier=todosServer
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

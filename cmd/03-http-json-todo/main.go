@@ -7,11 +7,16 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
 
-const defaultMaxId = 2
+const (
+	defaultServerPort = 8080
+	defaultServerIp   = "127.0.0.1"
+	defaultMaxId      = 2
+)
 
 type memoryStore struct {
 	Todos map[int32]*Todo
@@ -83,21 +88,6 @@ func (s goTodoServer) CreateTodo(ctx echo.Context) error {
 
 }
 
-// DeleteTodo will remove the given todoID entry from the store, and if not present will return 400 Bad Request
-//curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/3' ->  204 No Content if present and delete it
-//curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/93333' -> 400 Bad Request
-func (s goTodoServer) DeleteTodo(ctx echo.Context, todoId int32) error {
-	s.logger.Printf("# Entering DeleteTodo(%d)", todoId)
-	if s.data.Todos[todoId] == nil {
-		return ctx.NoContent(http.StatusNotFound)
-	} else {
-		s.data.lock.Lock()
-		defer s.data.lock.Unlock()
-		delete(s.data.Todos, todoId)
-		return ctx.NoContent(http.StatusNoContent)
-	}
-}
-
 // UpdateTodo will store the modified information in the store for the given todoId
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": true}'  'http://localhost:8080/todos/3'
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": false}'  'http://localhost:8080/todos/3'
@@ -139,6 +129,21 @@ func (s goTodoServer) UpdateTodo(ctx echo.Context, todoId int32) error {
 
 	s.data.Todos[todoId] = t
 	return ctx.JSON(http.StatusOK, t)
+}
+
+// DeleteTodo will remove the given todoID entry from the store, and if not present will return 400 Bad Request
+//curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/3' ->  204 No Content if present and delete it
+//curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/93333' -> 400 Bad Request
+func (s goTodoServer) DeleteTodo(ctx echo.Context, todoId int32) error {
+	s.logger.Printf("# Entering DeleteTodo(%d)", todoId)
+	if s.data.Todos[todoId] == nil {
+		return ctx.NoContent(http.StatusNotFound)
+	} else {
+		s.data.lock.Lock()
+		defer s.data.lock.Unlock()
+		delete(s.data.Todos, todoId)
+		return ctx.NoContent(http.StatusNoContent)
+	}
 }
 
 // initializeStorage initialize some dummy data to get some results back
@@ -187,7 +192,29 @@ func getNewServer(discardLog bool) *echo.Echo {
 	return e
 }
 
+//getListenAddrFromEnv returns a valid TCP/IP listening address string based on the values of ENV SERVERIP:PORT
+func getListenAddrFromEnv(defaultIP string, defaultPort int) string {
+	srvIP := defaultIP
+	srvPort := defaultPort
+	var err error
+	val, exist := os.LookupEnv("PORT")
+	if exist {
+		srvPort, err = strconv.Atoi(val)
+		if err != nil {
+			log.Fatal("ERROR: CONFIG ENV PORT should contain a valid integer value !")
+		}
+	}
+	val, exist = os.LookupEnv("SERVERIP")
+	if exist {
+		srvIP = val
+	}
+	return fmt.Sprintf("%s:%d", srvIP, srvPort)
+}
+
+// main is the entry point of your Todos service you can execute it with :
+// SERVERIP=192.168.50.6 PORT=3333 go run main.go todo_*.go
 func main() {
-	e := getNewServer(false)
-	e.Logger.Fatal(e.Start(":8080"))
+	listenAddress := getListenAddrFromEnv(defaultServerIp, defaultServerPort)
+	e := getNewServer(true)
+	e.Logger.Fatal(e.Start(listenAddress))
 }
