@@ -84,10 +84,18 @@ func TestGetListenAddrFromEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if len(tt.envSERVERIP) > 0 {
-				os.Setenv("SERVERIP", tt.envSERVERIP)
+				err := os.Setenv("SERVERIP", tt.envSERVERIP)
+				if err != nil {
+					t.Errorf("Unable to set env variable SERVERIP")
+					return
+				}
 			}
 			if len(tt.envPORT) > 0 {
-				os.Setenv("PORT", tt.envPORT)
+				err := os.Setenv("PORT", tt.envPORT)
+				if err != nil {
+					t.Errorf("Unable to set env variable PORT")
+					return
+				}
 			}
 			got, err := GetListenAddrFromEnv(tt.args.defaultIP, tt.args.defaultPort)
 			if (err != nil) != tt.wantErr {
