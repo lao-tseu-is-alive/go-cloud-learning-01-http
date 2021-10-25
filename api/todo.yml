@@ -110,6 +110,32 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /todos/{todoId}:
+    get:
+      description: Retrieve a specific todo
+      operationId: getTodo
+      parameters:
+        - name: todoId
+          in: path
+          description: Id of the todo
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: get todo's succesfull response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          description: get todo's response when todoId was not found
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     put:
       description: Updates the status of a todo
       operationId: updateTodo
@@ -140,7 +166,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Todo'
         '404':
-          description: delete todo's when todoId was not found
+          description: put todo's response when todoId was not found
         default:
           description: unexpected error
           content:
@@ -162,7 +188,7 @@ paths:
         '204':
           description: delete todo's succesfull no content
         '404':
-            description: delete todo's when todoId was not found
+            description: delete todo's response when todoId was not found
         default:
           description: unexpected error
           content:
