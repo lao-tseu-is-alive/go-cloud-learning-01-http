@@ -1,20 +1,28 @@
 package todos
 
 import (
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	todoGen "github.com/lao-tseu-is-alive/go-cloud-learning-01-http/gen"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 type Server struct {
-	*echo.Echo
 	log   *log.Logger
 	store Storage
+}
+
+type ErrorService struct {
+	Err    error  `json:"err" `
+	Status int    `json:"status" `
+	Msg    string `json:"msg" `
+}
+
+func (e *ErrorService) Error() string {
+	return fmt.Sprintf("Status[%d] %s. error: %v", e.Status, e.Msg, e.Err)
 }
 
 // GetMaxId returns the greatest todos id used by now
@@ -22,26 +30,35 @@ type Server struct {
 func (s Server) GetMaxId(ctx echo.Context) error {
 	s.log.Println("# Entering GetMaxId()")
 	var maxTodoId int32 = 0
-	maxTodoId, _ = s.store.Count()
-	/*defer s.data.lock.RUnlock()
-	for myTodoId, _ := range s.data.Todos {
-		if myTodoId > maxTodoId {
-			maxTodoId = myTodoId
-		}
-	}*/
+	maxTodoId, _ = s.store.GetMaxId()
 	s.log.Printf("# Exit GetMaxId() maxTodoId: %d", maxTodoId)
 	return ctx.JSON(http.StatusOK, maxTodoId)
 }
 
+func (s Server) GetTodo(ctx echo.Context, todoId int32) error {
+	s.log.Printf("# Entering GetTodo(%d)", todoId)
+	if s.store.Exist(todoId) == false {
+		return ctx.JSON(http.StatusNotFound, ErrorService{
+			Err:    errors.New("not found"),
+			Status: http.StatusNotFound,
+			Msg:    fmt.Sprintf("todo id : %d does not exist", todoId),
+		})
+	}
+	todo, err := s.store.Get(todoId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem retrieving todo :%v", err))
+	}
+	return ctx.JSON(http.StatusOK, todo)
+}
+
 //GetTodos will retrieve all Todos in the store and return then
 //to test it with curl you can try :
-//curl -H "Content-Type: application/json" 'http://localhost:8080/todos' |json_pp
-
+//curl -H "Content-Type: application/json" 'http://localhost:8080/todos/3' |json_pp
 func (s Server) GetTodos(ctx echo.Context, params GetTodosParams) error {
 	s.log.Printf("# Entering GetTodos() %v", params)
 	list, err := s.store.List(0, 100)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("there was a problem when calling store.List :%v", err))
 	}
 	return ctx.JSON(http.StatusOK, list)
 }
@@ -52,7 +69,7 @@ func (s Server) GetTodos(ctx echo.Context, params GetTodosParams) error {
 //curl -XPOST -H "Content-Type: application/json" -d '{"task":""}'  'http://localhost:8080/todos'
 func (s Server) CreateTodo(ctx echo.Context) error {
 	s.log.Println("# Entering CreateTodo()")
-	newTodo := &todoGen.NewTodo{}
+	newTodo := &NewTodo{}
 	if err := ctx.Bind(newTodo); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("CreateTodo has invalid format [%v]", err))
 	}
@@ -63,10 +80,12 @@ func (s Server) CreateTodo(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task minLength is 5"))
 	}
 	s.log.Printf("# CreateTodo() newTodo : %#v\n", newTodo)
-	t.Task = newTodo.Task
-	s.log.Printf("# CreateTodo() Todo %#v\n", t)
-	s.data.Todos[t.Id] = t
-	return ctx.JSON(http.StatusCreated, t)
+	todoCreated, err := s.store.Create(*newTodo)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem saving new todo :%v", err))
+	}
+	s.log.Printf("# CreateTodo() Todo %#v\n", todoCreated)
+	return ctx.JSON(http.StatusCreated, todoCreated)
 
 }
 
@@ -75,11 +94,13 @@ func (s Server) CreateTodo(ctx echo.Context) error {
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": false}'  'http://localhost:8080/todos/3'
 func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
 	s.log.Printf("# Entering UpdateTodo(%d)", todoId)
-	if s.data.Todos[todoId] == nil {
-		return ctx.NoContent(http.StatusNotFound)
+	if s.store.Exist(todoId) == false {
+		return ctx.JSON(http.StatusNotFound, ErrorService{
+			Err:    errors.New("not found"),
+			Status: http.StatusNotFound,
+			Msg:    fmt.Sprintf("todo id : %d does not exist", todoId),
+		})
 	}
-	s.data.lock.Lock()
-	defer s.data.lock.Unlock()
 	t := new(Todo)
 	if err := ctx.Bind(t); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("UpdateTodo has invalid format [%v]", err))
@@ -87,30 +108,17 @@ func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
 	if len(t.Task) < 1 {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task cannot be empty"))
 	}
-	if len(t.Task) < 6 {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task minLength is 5"))
-	}
-	existingTodo := s.data.Todos[todoId]
-	now := time.Now()
-	// cannot override CreatedAt fields
-	t.CreatedAt = existingTodo.CreatedAt
-	switch t.Completed {
-	case true:
-		if existingTodo.Completed == false {
-			t.CompletedAt = &now
-		}
-	case false:
-		if existingTodo.Completed == true {
-			// task was completed, but user changed it to not completed
-			t.CompletedAt = nil
-		}
-	// in all other cases the value of CompletedAt should not be changed
-	default:
-		t.CompletedAt = existingTodo.CompletedAt
+	//refuse an attempt to modify a todoId (in url) with a different id in the body !
+	if t.Id != todoId {
+		return echo.NewHTTPError(http.StatusBadRequest,
+			fmt.Sprintf("UpdateTodo id : [%d] and posted Id [%d] cannot differ ", todoId, t.Id))
 	}
 
-	s.data.Todos[todoId] = t
-	return ctx.JSON(http.StatusOK, t)
+	updatedTodo, err := s.store.Update(todoId, *t)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem updating todo :%v", err))
+	}
+	return ctx.JSON(http.StatusOK, updatedTodo)
 }
 
 // DeleteTodo will remove the given todoID entry from the store, and if not present will return 400 Bad Request
@@ -118,12 +126,17 @@ func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
 //curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/93333' -> 400 Bad Request
 func (s Server) DeleteTodo(ctx echo.Context, todoId int32) error {
 	s.log.Printf("# Entering DeleteTodo(%d)", todoId)
-	if s.data.Todos[todoId] == nil {
-		return ctx.NoContent(http.StatusNotFound)
+	if s.store.Exist(todoId) == false {
+		return ctx.JSON(http.StatusNotFound, ErrorService{
+			Err:    errors.New("not found"),
+			Status: http.StatusNotFound,
+			Msg:    fmt.Sprintf("todo id : %d does not exist", todoId),
+		})
 	} else {
-		s.data.lock.Lock()
-		defer s.data.lock.Unlock()
-		delete(s.data.Todos, todoId)
+		err := s.store.Delete(todoId)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem deleting todo :%v", err))
+		}
 		return ctx.NoContent(http.StatusNoContent)
 	}
 }
@@ -139,12 +152,11 @@ func GetNewServer(discardLog bool) *echo.Echo {
 	e := echo.New()
 	s, _ := GetInstance("memory", "")
 	myApi := Server{
-		Echo:  e,
 		log:   l,
 		store: s,
 	}
 
-	todoGen.RegisterHandlers(e, &myApi)
+	RegisterHandlers(e, &myApi)
 	// add a route for maxId
 	e.GET("/todos/maxid", myApi.GetMaxId)
 	return e
