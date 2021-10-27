@@ -16,3 +16,5 @@
 .idea
 /externals_examples/learn-go-with-tests/
 /externals_examples/oapi-codegen/
+/.env
+/bin/todosServer
