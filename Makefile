@@ -5,6 +5,13 @@ export $(shell sed 's/=.*//' .env)
 #the name of your API
 APP=todos
 EXECUTABLE=$(APP)Server
+APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+# using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
+# here with the docker file so no need to install it
+# MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/migrations/ -database "$(APP_DSN)"
+# or download your release from here : https://github.com/golang-migrate/migrate/releases
+# for ubuntu & debian : wget https://github.com/golang-migrate/migrate/releases/download/v4.15.1/migrate.linux-amd64.deb
+MIGRATE=/usr/local/bin/migrate
 
 # Make is verbose in Linux. Make it silent.
 MAKEFLAGS += --silent
@@ -37,14 +44,6 @@ build-docker: ## build the API server as a docker image
 clean:
 	rm -rf bin/$(EXECUTABLE) coverage.out coverage-all.out
 
-#.PHONY: db-docker-start
-#db-docker-start: ## start the database server in docker container
-#	@mkdir -p test/data/postgres
-#	docker run --rm --name postgres -v $(shell pwd)/test/data:/testdata \
-#		-v $(shell pwd)/test/data/postgres:/var/lib/postgresql/data \
-#		-e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=$(APP) -e POSTGRES_DB=$(APP) -d -p 5433:5433 postgres
-
-
 .PHONY: db-docker-start
 ## db-docker-start:	start docker postgres server, create app user&db  in a container named go-$(APP)-postgres
 db-docker-start:
@@ -53,9 +52,9 @@ db-docker-start:
 # to 0 if it does exist (this respects stopped containers). So the run command will just be called
 # in case container does not exist as expected.
 	docker container inspect go-$(APP)-postgres > /dev/null 2>&1 || \
-	echo "  >  Starting your postgresql container..."; \
+	echo "  >  Starting your postgresql container on port ${DB_PORT}..."; \
 	docker run --name go-$(APP)-postgres \
-	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(APP) -e POSTGRES_DB=$(APP) -d postgres
+	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_PORT):5432 postgres
 
 .PHONY: db-docker-is-ready
 ## db-docker-is-ready:	will wait until postgres is ready to be used
@@ -84,6 +83,32 @@ db-docker-delete: db-docker-stop
 	@rm -rf test/data/postgres/*
 	@rmdir test/data/postgres
 	docker rm go-$(APP)-postgres
+
+.PHONY: db-docker-migrate-new
+## db-docker-migrate-new:	create a new database migration
+db-docker-migrate-new:
+	@read -p "Enter the name of the new migration: " name; \
+	$(MIGRATE) create -ext sql -dir db/migrations/ $${name// /_}
+
+.PHONY: db-docker-migrate-up
+## db-docker-migrate-up: run all new database migrations
+db-docker-migrate-up:
+	@echo "Running all new database migrations..."
+	@$(MIGRATE) up
+
+.PHONY: db-docker-migrate-down
+## db-docker-migrate-up: revert database to the last migration step
+db-docker-migrate-down:
+	@echo "Running all new database migrations..."
+	@$(MIGRATE) down 1
+
+.PHONY: db-docker-migrate-reset
+## db-docker-migrate-reset:	 reset database and re-run all migrations
+db-docker-migrate-reset:
+	@echo "Resetting database..."
+	@$(MIGRATE) drop
+	@echo "Running all database migrations..."
+	@$(MIGRATE) up
 
 
 .PHONY: help
