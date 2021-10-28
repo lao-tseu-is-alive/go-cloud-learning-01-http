@@ -57,18 +57,17 @@ db-docker-start:
 	docker run --name go-$(APP)-postgres \
 	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(APP) -e POSTGRES_DB=$(APP) -d postgres
 
-#.PHONY: db-docker-is-ready
-### db-docker-is-ready:	will wait until postgres is ready to be used
-#db-docker-is-ready: db-docker-start
-#	@echo "  >  Waiting for postgresql to be ready"
-#	DOCKER_CONTAINER_NAME=go-$(APP)-postgres \
-#	bash -c "until docker exec $(DOCKER_CONTAINER_NAME) pg_isready ; do sleep 5 ; done"
+.PHONY: db-docker-is-ready
+## db-docker-is-ready:	will wait until postgres is ready to be used
+db-docker-is-ready: db-docker-start
+	@echo "  >  Waiting for postgresql to be ready"
+	until docker exec go-$(APP)-postgres pg_isready ; do sleep 3 ; done
 #docker exec -it go-$(APP)-postgres pg_isready
 #timeout 90s bash -c "until docker exec $(DOCKER_CONTAINER_NAME) pg_isready ; do sleep 5 ; done"
 
 .PHONY: db-docker-psql
-## db-docker-psql:	open a psql session  on your app database  in docker container
-db-docker-psql: db-docker-start
+## db-docker-psql:	open a psql session  on your app database  (starts docker container if not running)
+db-docker-psql: db-docker-start db-docker-is-ready
 	@echo "  >  Entering in postgresql psql shell (use \q to exit) "
 	docker exec -it go-$(APP)-postgres psql $(APP) -U $(APP)
 
