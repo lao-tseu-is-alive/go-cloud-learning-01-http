@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 )
 
 type Server struct {
@@ -142,15 +140,9 @@ func (s Server) DeleteTodo(ctx echo.Context, todoId int32) error {
 }
 
 // GetNewServer initialize a new Echo server and returns it
-func GetNewServer(discardLog bool) *echo.Echo {
-	var l *log.Logger
-	if discardLog == true {
-		l = log.New(ioutil.Discard, "todo-api_", log.Ldate|log.Ltime|log.Lshortfile)
-	} else {
-		l = log.New(os.Stdout, "todo-api_", log.Ldate|log.Ltime|log.Lshortfile)
-	}
+func GetNewServer(l *log.Logger, dbDsn string) *echo.Echo {
 	e := echo.New()
-	s, _ := GetInstance("memory", "")
+	s, _ := GetInstance("postgres", dbDsn, l)
 	myApi := Server{
 		log:   l,
 		store: s,

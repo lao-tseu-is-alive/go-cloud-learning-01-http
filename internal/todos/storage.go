@@ -3,6 +3,8 @@ package todos
 import (
 	"errors"
 	"fmt"
+	"log"
+	"runtime"
 )
 
 // Storage is an interface to different implementation of persistence for Todos
@@ -25,15 +27,15 @@ type Storage interface {
 	Delete(id int32) error
 }
 
-func GetInstance(dbDriver, dbConnectionString string) (Storage, error) {
+func GetInstance(dbDriver, dbConnectionString string, log *log.Logger) (Storage, error) {
 	var db Storage
 	var err error
 	switch dbDriver {
-	/*case "pgx":
-	db, err = NewPgxDB(dbConnectionString, runtime.NumCPU())
-	if err != nil {
-		return nil, fmt.Errorf("error opening postgresql database with pgx driver: %s", err)
-	}*/
+	case "postgres":
+		db, err = NewPgxDB(dbConnectionString, runtime.NumCPU(), log)
+		if err != nil {
+			return nil, fmt.Errorf("error opening postgresql database with pgx driver: %s", err)
+		}
 	case "memory":
 		db, err = NewMemoryDB()
 		if err != nil {
