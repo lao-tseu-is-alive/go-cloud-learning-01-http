@@ -18,3 +18,5 @@
 /externals_examples/oapi-codegen/
 /.env
 /bin/todosServer
+/scripts/todos.conf_local
+/todos.conf

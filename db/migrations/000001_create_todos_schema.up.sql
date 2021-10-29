@@ -4,7 +4,7 @@ create table public.todos
     task        text not null,
     completed   bool      default false,
     created_at  timestamp default now(),
-    modified_at timestamp
+    completed_at timestamp
 );
 
 comment

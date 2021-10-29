@@ -1,5 +1,6 @@
 #!make
 include .env
+# next line allows to export env variables to external process (like your Go app)
 export $(shell sed 's/=.*//' .env)
 
 #the name of your API
@@ -8,10 +9,10 @@ EXECUTABLE=$(APP)Server
 APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 # using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
 # here with the docker file so no need to install it
-# MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/migrations/ -database "$(APP_DSN)"
+# MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/db/migrations/ -database "$(APP_DSN)"
 # or download your release from here : https://github.com/golang-migrate/migrate/releases
 # for ubuntu & debian : wget https://github.com/golang-migrate/migrate/releases/download/v4.15.1/migrate.linux-amd64.deb
-MIGRATE=/usr/local/bin/migrate
+MIGRATE=/usr/local/bin/migrate -database "$(APP_DSN)" -path=db/migrations/
 
 # Make is verbose in Linux. Make it silent.
 MAKEFLAGS += --silent
@@ -51,10 +52,15 @@ db-docker-start:
 # docker container inspect call will set $? to 1 if container does not exist (cannot inspect) but
 # to 0 if it does exist (this respects stopped containers). So the run command will just be called
 # in case container does not exist as expected.
+# -v $(shell pwd)/testdata/postgres:/var/lib/postgresql/data
+	@echo "  >  Checking if for postgresql container is already there"
 	docker container inspect go-$(APP)-postgres > /dev/null 2>&1 || \
-	echo "  >  Starting your postgresql container on port ${DB_PORT}..."; \
+	(echo "  >  Started your postgresql container on port ${DB_HOST}:${DB_PORT}..."; \
 	docker run --name go-$(APP)-postgres \
-	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_PORT):5432 postgres
+	-v $(shell pwd)/test/data:/testdata  \
+	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_HOST):$(DB_PORT):5432 postgres \
+	)
+
 
 .PHONY: db-docker-is-ready
 ## db-docker-is-ready:	will wait until postgres is ready to be used
@@ -67,6 +73,7 @@ db-docker-is-ready: db-docker-start
 .PHONY: db-docker-psql
 ## db-docker-psql:	open a psql session  on your app database  (starts docker container if not running)
 db-docker-psql: db-docker-start db-docker-is-ready
+	@echo "  >  You can also use : scripts/connect_psql_with_dot_env.sh"
 	@echo "  >  Entering in postgresql psql shell (use \q to exit) "
 	docker exec -it go-$(APP)-postgres psql $(APP) -U $(APP)
 
@@ -109,6 +116,14 @@ db-docker-migrate-reset:
 	@$(MIGRATE) drop
 	@echo "Running all database migrations..."
 	@$(MIGRATE) up
+
+
+.PHONY: db-docker-init-data
+## db-docker-init-data:	load initial data in your app database  (starts docker container if not running)
+db-docker-init-data: db-docker-start db-docker-is-ready
+	@echo "  >  Loading data in your postgresql db... "
+	docker exec -it go-$(APP)-postgres psql $(APP) -U $(APP) -f /testdata/initial_todos_data.sql
+
 
 
 .PHONY: help
