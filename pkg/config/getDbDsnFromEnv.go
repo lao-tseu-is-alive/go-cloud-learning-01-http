@@ -13,14 +13,17 @@ import (
 //	DB_NAME : string containing the database name
 //	DB_USER : string containing the database username
 //	DB_PASSWORD : string containing the database user password
+//  DB_SSL_MODE : string containing ssl mode (disable|allow|prefer|require|verify-ca|verify-full)
+//  more info on libpg SSL : https://www.postgresql.org/docs/11/libpq-ssl.html#LIBPQ-SSL-PROTECTION
 //  more info : https://pkg.go.dev/github.com/jackc/pgconn#ParseConfig
 func GetPgDbDsnUrlFromEnv(defaultIP string, defaultPort int,
-	defaultDbName string, defaultDbUser string, defaultDbPassword string) (string, error) {
+	defaultDbName string, defaultDbUser string, defaultDbPassword string, defaultSSL string) (string, error) {
 	srvIP := defaultIP
 	srvPort := defaultPort
 	dbName := defaultDbName
 	dbUser := defaultDbUser
 	dbPassword := defaultDbPassword
+	dbSslMode := defaultSSL
 
 	var err error
 	val, exist := os.LookupEnv("DB_PORT")
@@ -61,7 +64,11 @@ func GetPgDbDsnUrlFromEnv(defaultIP string, defaultPort int,
 	if exist {
 		dbPassword = val
 	}
-	//"postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca"
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disabled",
-		dbUser, dbPassword, srvIP, srvPort, dbName), nil
+	val, exist = os.LookupEnv("DB_SSL_MODE")
+	if exist {
+		dbSslMode = val
+	}
+	//"postgres://jack:secret@pg.example.com:5432/db?sslmode=verify-ca"
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		dbUser, dbPassword, srvIP, srvPort, dbName, dbSslMode), nil
 }

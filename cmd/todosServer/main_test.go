@@ -5,15 +5,20 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/internal/todos"
+	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
 
-const DEBUG = false
+const (
+	defaultNewTask = "Learn Linux"
+	DEBUG          = false
+)
 
 type idCounter struct {
 	currentMaxId int32
@@ -53,24 +58,14 @@ func getUrlForId(myIdCounter idCounter) string {
 	return fmt.Sprintf("/todos/%d", myIdCounter.current())
 }
 
-func Test_goTodoServer_Todos(t *testing.T) {
-	// Create server using the router initialized elsewhere. The router
-	// can be a net/http ServeMux a http.DefaultServeMux or
-	// any value that satisfies the net/http Handler interface.
-	myServer := todos.GetNewServer(true)
-	ts := httptest.NewServer(myServer)
-	defer ts.Close()
+type testScenario struct {
+	name           string
+	wantStatusCode int
+	wantBody       string
+	r              *http.Request
+}
 
-	const (
-		defaultNewTask = "Learn Linux"
-	)
-	myId := idCounter{currentMaxId: todos.DefaultMaxId}
-
-	InitialDB, _ := todos.GetInstance("memory", "")
-	res, _ := InitialDB.List(0, 100)
-	jsonInitialData, _ := json.Marshal(res)
-	firstTodo, _ := json.Marshal(res[0])
-
+func getTestTable(t *testing.T, ts *httptest.Server, myId idCounter, jsonInitialData, firstTodo []byte) []testScenario {
 	newRequest := func(method, url string, body string) *http.Request {
 		r, err := http.NewRequest(method, ts.URL+url, strings.NewReader(body))
 		if err != nil {
@@ -79,12 +74,7 @@ func Test_goTodoServer_Todos(t *testing.T) {
 		return r
 	}
 
-	tests := []struct {
-		name           string
-		wantStatusCode int
-		wantBody       string
-		r              *http.Request
-	}{
+	return []testScenario{
 		{
 			name:           "1: GetTodos , should return all the existing Todos as json",
 			wantStatusCode: http.StatusOK,
@@ -212,6 +202,103 @@ func Test_goTodoServer_Todos(t *testing.T) {
 			r:              newRequest(http.MethodGet, "/nothing_available_here", `{"task":"123"}`),
 		},
 	}
+}
+
+func Test_goTodoServer_TodosMemory(t *testing.T) {
+	// Create server using the router initialized elsewhere. The router
+	// can be a net/http ServeMux a http.DefaultServeMux or
+	// any value that satisfies the net/http Handler interface.
+	l := log.New(ioutil.Discard, appName, 0)
+	InitialDB, _ := todos.GetStorageInstance("memory", "", l)
+	myServer := GetNewServer(l, InitialDB)
+	ts := httptest.NewServer(myServer)
+	defer ts.Close()
+
+	res, _ := InitialDB.List(0, 100)
+	jsonInitialData, _ := json.Marshal(res)
+	firstTodo, _ := json.Marshal(res[0])
+
+	tests := getTestTable(t, ts, idCounter{currentMaxId: todos.DefaultMaxId}, jsonInitialData, firstTodo)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.r.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			resp, err := http.DefaultClient.Do(tt.r)
+			if DEBUG {
+				fmt.Printf("### %s : %s on %s\n", tt.name, tt.r.Method, tt.r.URL)
+			}
+			defer resp.Body.Close()
+			if err != nil {
+				fmt.Printf("### GOT ERROR : %s\n%s", err, resp.Body)
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.wantStatusCode, resp.StatusCode, "expected status code should be returned")
+			receivedJson, _ := ioutil.ReadAll(resp.Body)
+
+			if resp.StatusCode == http.StatusCreated {
+				// In case of Created we need to modify the CreatedAt value from the response for equality test to pass
+				myNewTodo := todos.Todo{
+					Completed:   false,
+					CompletedAt: nil,
+					CreatedAt:   nil,
+					Id:          0,
+					Task:        defaultNewTask,
+				}
+				var createdTodo todos.Todo
+				err := json.Unmarshal(receivedJson, &createdTodo)
+				if err != nil {
+					fmt.Printf("FATAL ERROR doing json.Unmarshall of %#v   - Error: %s", string(receivedJson), err)
+				}
+				myNewTodo.CreatedAt = createdTodo.CreatedAt
+				myNewTodo.Id = createdTodo.Id
+				wantedTodoJson, _ := json.Marshal(myNewTodo)
+				if DEBUG {
+					fmt.Printf("WANTED   :%T - %#v\n", wantedTodoJson, string(wantedTodoJson))
+					fmt.Printf("RECEIVED :%T - %#v\n", receivedJson, string(receivedJson))
+				}
+				assert.JSONEqf(t, string(wantedTodoJson), string(receivedJson), "CreateTodo Response was not equal to expected.")
+			} else {
+				// here are all other cases (except Created above)
+				if DEBUG {
+					fmt.Printf("WANTED   :%T - %#v\n", tt.wantBody, tt.wantBody)
+					fmt.Printf("RECEIVED :%T - %#v\n", receivedJson, string(receivedJson))
+				}
+				// check that receivedJson contains the specified tt.wantBody substring . https://pkg.go.dev/github.com/stretchr/testify/assert#Contains
+				assert.Contains(t, string(receivedJson), tt.wantBody, "Response should contain what was expected.")
+			}
+		})
+	}
+}
+
+func Test_goTodoServer_TodosPostgres(t *testing.T) {
+	// Create server using the router initialized elsewhere. The router
+	// can be a net/http ServeMux a http.DefaultServeMux or
+	// any value that satisfies the net/http Handler interface.
+	l := log.New(ioutil.Discard, appName, 0)
+	dbDsn, err := config.GetPgDbDsnUrlFromEnv(defaultDBIp, defaultDBPort,
+		appName, appName, defaultDBPassword, defaultDBSslMode)
+	if err != nil {
+		panic(fmt.Sprintf("error doing config.GetPgDbDsnUrlFromEnv. error: %v", err))
+	}
+
+	InitialDB, err := todos.GetStorageInstance("postgres", dbDsn, l)
+	if err != nil {
+		panic(fmt.Sprintf("error getting storage. is postgres available ? error : %v ", err))
+	}
+	defer InitialDB.Close()
+	myServer := GetNewServer(l, InitialDB)
+	ts := httptest.NewServer(myServer)
+	defer ts.Close()
+
+	res, _ := InitialDB.List(0, 100)
+
+	jsonInitialData, _ := json.Marshal(res)
+	fmt.Printf("%#v", res)
+	firstTodo, _ := json.Marshal(res[0])
+	maxId, _ := InitialDB.GetMaxId()
+
+	tests := getTestTable(t, ts, idCounter{currentMaxId: maxId}, jsonInitialData, firstTodo)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.r.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

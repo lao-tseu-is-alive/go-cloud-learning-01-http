@@ -7,10 +7,19 @@ import (
 	"runtime"
 )
 
+func IsDriverSupported(driver string) bool {
+	switch driver {
+	case "memory",
+		"postgres":
+		return true
+	}
+	return false
+}
+
 // Storage is an interface to different implementation of persistence for Todos
 type Storage interface {
 	// List returns the list of existing todos with the given offset and limit.
-	List(offset, limit int) ([]Todo, error)
+	List(offset, limit int) ([]*Todo, error)
 	// Get returns the todos with the specified todos ID.
 	Get(id int32) (*Todo, error)
 	// GetMaxId returns the maximum value of todos id existing in store.
@@ -25,9 +34,11 @@ type Storage interface {
 	Update(id int32, todo Todo) (*Todo, error)
 	// Delete removes the todos with given ID from the storage.
 	Delete(id int32) error
+	// Close terminates properly the connection to the backend
+	Close()
 }
 
-func GetInstance(dbDriver, dbConnectionString string, log *log.Logger) (Storage, error) {
+func GetStorageInstance(dbDriver, dbConnectionString string, log *log.Logger) (Storage, error) {
 	var db Storage
 	var err error
 	switch dbDriver {
@@ -46,4 +57,8 @@ func GetInstance(dbDriver, dbConnectionString string, log *log.Logger) (Storage,
 
 	}
 	return db, nil
+}
+
+func GetErrorF(errMsg string, err error) error {
+	return errors.New(fmt.Sprintf("%s [%v]", errMsg, err))
 }

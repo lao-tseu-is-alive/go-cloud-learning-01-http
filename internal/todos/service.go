@@ -8,9 +8,9 @@ import (
 	"net/http"
 )
 
-type Server struct {
-	log   *log.Logger
-	store Storage
+type Service struct {
+	Log   *log.Logger
+	Store Storage
 }
 
 type ErrorService struct {
@@ -25,24 +25,24 @@ func (e *ErrorService) Error() string {
 
 // GetMaxId returns the greatest todos id used by now
 // curl -H "Content-Type: application/json" 'http://localhost:8080/todos/maxid'
-func (s Server) GetMaxId(ctx echo.Context) error {
-	s.log.Println("# Entering GetMaxId()")
+func (s Service) GetMaxId(ctx echo.Context) error {
+	s.Log.Println("# Entering GetMaxId()")
 	var maxTodoId int32 = 0
-	maxTodoId, _ = s.store.GetMaxId()
-	s.log.Printf("# Exit GetMaxId() maxTodoId: %d", maxTodoId)
+	maxTodoId, _ = s.Store.GetMaxId()
+	s.Log.Printf("# Exit GetMaxId() maxTodoId: %d", maxTodoId)
 	return ctx.JSON(http.StatusOK, maxTodoId)
 }
 
-func (s Server) GetTodo(ctx echo.Context, todoId int32) error {
-	s.log.Printf("# Entering GetTodo(%d)", todoId)
-	if s.store.Exist(todoId) == false {
+func (s Service) GetTodo(ctx echo.Context, todoId int32) error {
+	s.Log.Printf("# Entering GetTodo(%d)", todoId)
+	if s.Store.Exist(todoId) == false {
 		return ctx.JSON(http.StatusNotFound, ErrorService{
 			Err:    errors.New("not found"),
 			Status: http.StatusNotFound,
 			Msg:    fmt.Sprintf("todo id : %d does not exist", todoId),
 		})
 	}
-	todo, err := s.store.Get(todoId)
+	todo, err := s.Store.Get(todoId)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem retrieving todo :%v", err))
 	}
@@ -51,10 +51,10 @@ func (s Server) GetTodo(ctx echo.Context, todoId int32) error {
 
 //GetTodos will retrieve all Todos in the store and return then
 //to test it with curl you can try :
-//curl -H "Content-Type: application/json" 'http://localhost:8080/todos/3' |json_pp
-func (s Server) GetTodos(ctx echo.Context, params GetTodosParams) error {
-	s.log.Printf("# Entering GetTodos() %v", params)
-	list, err := s.store.List(0, 100)
+//curl -H "Content-Type: application/json" 'http://localhost:8080/todos' |json_pp
+func (s Service) GetTodos(ctx echo.Context, params GetTodosParams) error {
+	s.Log.Printf("# Entering GetTodos() %v", params)
+	list, err := s.Store.List(0, 100)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("there was a problem when calling store.List :%v", err))
 	}
@@ -65,8 +65,8 @@ func (s Server) GetTodos(ctx echo.Context, params GetTodosParams) error {
 //to test it with curl you can try :
 //curl -XPOST -H "Content-Type: application/json" -d '{"task":"learn Linux"}'  'http://localhost:8080/todos'
 //curl -XPOST -H "Content-Type: application/json" -d '{"task":""}'  'http://localhost:8080/todos'
-func (s Server) CreateTodo(ctx echo.Context) error {
-	s.log.Println("# Entering CreateTodo()")
+func (s Service) CreateTodo(ctx echo.Context) error {
+	s.Log.Println("# Entering CreateTodo()")
 	newTodo := &NewTodo{}
 	if err := ctx.Bind(newTodo); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("CreateTodo has invalid format [%v]", err))
@@ -77,12 +77,12 @@ func (s Server) CreateTodo(ctx echo.Context) error {
 	if len(newTodo.Task) < 6 {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprint("CreateTodo task minLength is 5"))
 	}
-	s.log.Printf("# CreateTodo() newTodo : %#v\n", newTodo)
-	todoCreated, err := s.store.Create(*newTodo)
+	s.Log.Printf("# CreateTodo() newTodo : %#v\n", newTodo)
+	todoCreated, err := s.Store.Create(*newTodo)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem saving new todo :%v", err))
 	}
-	s.log.Printf("# CreateTodo() Todo %#v\n", todoCreated)
+	s.Log.Printf("# CreateTodo() Todo %#v\n", todoCreated)
 	return ctx.JSON(http.StatusCreated, todoCreated)
 
 }
@@ -90,9 +90,9 @@ func (s Server) CreateTodo(ctx echo.Context) error {
 // UpdateTodo will store the modified information in the store for the given todoId
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": true}'  'http://localhost:8080/todos/3'
 // curl -v -XPUT -H "Content-Type: application/json" -d '{"id": 3, "task":"learn Linux", "completed": false}'  'http://localhost:8080/todos/3'
-func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
-	s.log.Printf("# Entering UpdateTodo(%d)", todoId)
-	if s.store.Exist(todoId) == false {
+func (s Service) UpdateTodo(ctx echo.Context, todoId int32) error {
+	s.Log.Printf("# Entering UpdateTodo(%d)", todoId)
+	if s.Store.Exist(todoId) == false {
 		return ctx.JSON(http.StatusNotFound, ErrorService{
 			Err:    errors.New("not found"),
 			Status: http.StatusNotFound,
@@ -112,7 +112,7 @@ func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
 			fmt.Sprintf("UpdateTodo id : [%d] and posted Id [%d] cannot differ ", todoId, t.Id))
 	}
 
-	updatedTodo, err := s.store.Update(todoId, *t)
+	updatedTodo, err := s.Store.Update(todoId, *t)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem updating todo :%v", err))
 	}
@@ -122,34 +122,19 @@ func (s Server) UpdateTodo(ctx echo.Context, todoId int32) error {
 // DeleteTodo will remove the given todoID entry from the store, and if not present will return 400 Bad Request
 //curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/3' ->  204 No Content if present and delete it
 //curl -v -XDELETE -H "Content-Type: application/json" 'http://localhost:8080/todos/93333' -> 400 Bad Request
-func (s Server) DeleteTodo(ctx echo.Context, todoId int32) error {
-	s.log.Printf("# Entering DeleteTodo(%d)", todoId)
-	if s.store.Exist(todoId) == false {
+func (s Service) DeleteTodo(ctx echo.Context, todoId int32) error {
+	s.Log.Printf("# Entering DeleteTodo(%d)", todoId)
+	if s.Store.Exist(todoId) == false {
 		return ctx.JSON(http.StatusNotFound, ErrorService{
 			Err:    errors.New("not found"),
 			Status: http.StatusNotFound,
 			Msg:    fmt.Sprintf("todo id : %d does not exist", todoId),
 		})
 	} else {
-		err := s.store.Delete(todoId)
+		err := s.Store.Delete(todoId)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("problem deleting todo :%v", err))
 		}
 		return ctx.NoContent(http.StatusNoContent)
 	}
-}
-
-// GetNewServer initialize a new Echo server and returns it
-func GetNewServer(l *log.Logger, dbDsn string) *echo.Echo {
-	e := echo.New()
-	s, _ := GetInstance("postgres", dbDsn, l)
-	myApi := Server{
-		log:   l,
-		store: s,
-	}
-
-	RegisterHandlers(e, &myApi)
-	// add a route for maxId
-	e.GET("/todos/maxid", myApi.GetMaxId)
-	return e
 }

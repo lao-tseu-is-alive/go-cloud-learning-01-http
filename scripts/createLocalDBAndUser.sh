@@ -45,7 +45,7 @@ Environment="DBPASS=${DB_PASSWORD}"
 # it depends on various factor. is your service (go) running in the same host as the db (localhost ?)
 # if not, is the network between your server and your db trusted ?? read the doc and ask your security officer:
 # https://www.postgresql.org/docs/11/libpq-ssl.html#LIBPQ-SSL-PROTECTION
-Environment="DB_SSL_MODE=disabled"
+Environment="DB_SSL_MODE=disable"
 EOS
 
 

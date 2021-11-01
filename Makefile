@@ -99,7 +99,7 @@ db-docker-migrate-new:
 
 .PHONY: db-docker-migrate-up
 ## db-docker-migrate-up: run all new database migrations
-db-docker-migrate-up:
+db-docker-migrate-up: db-docker-start db-docker-is-ready
 	@echo "Running all new database migrations..."
 	@$(MIGRATE) up
 
@@ -120,7 +120,7 @@ db-docker-migrate-reset:
 
 .PHONY: db-docker-init-data
 ## db-docker-init-data:	load initial data in your app database  (starts docker container if not running)
-db-docker-init-data: db-docker-start db-docker-is-ready
+db-docker-init-data: db-docker-migrate-up
 	@echo "  >  Loading data in your postgresql db... "
 	docker exec -it go-$(APP)-postgres psql $(APP) -U $(APP) -f /testdata/initial_todos_data.sql
 

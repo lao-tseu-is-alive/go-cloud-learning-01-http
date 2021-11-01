@@ -37,10 +37,10 @@ func (m *memoryStore) Create(todo NewTodo) (*Todo, error) {
 	return t, nil
 }
 
-func (m *memoryStore) List(offset, limit int) ([]Todo, error) {
+func (m *memoryStore) List(offset, limit int) ([]*Todo, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	var res []Todo
+	var res []*Todo
 	if offset > 0 && offset < len(m.Todos) {
 		// handle offset
 	} else {
@@ -48,7 +48,7 @@ func (m *memoryStore) List(offset, limit int) ([]Todo, error) {
 			//return all
 
 			for _, value := range m.Todos {
-				res = append(res, *value)
+				res = append(res, value)
 			}
 		}
 	}
@@ -131,6 +131,16 @@ func (m *memoryStore) Delete(id int32) error {
 		return nil
 	}
 	return errors.New("todo with this id does not exist")
+}
+
+// Close : will do cleanup for all todos stored in memory
+func (m *memoryStore) Close() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	for idx, _ := range m.Todos {
+		delete(m.Todos, idx)
+	}
+	return
 }
 
 // initializeStorage initialize some dummy data to get some results back
