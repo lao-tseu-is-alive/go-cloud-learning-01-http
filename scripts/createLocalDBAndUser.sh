@@ -34,8 +34,18 @@ cat  > "${APP_NAME}".conf << EOS
 [Service]
 Environment="PORT=8080"
 Environment="SERVERIP=localhost"
+# a way to indicate which storage to use for now one of (memory|postgres)
+Environment="DB_DRIVER=postgres"
+Environment="DB_HOST=127.0.0.1"
+Environment="DB_PORT=5433"
+Environment="DB_NAME=${APP_NAME}"
 Environment="DBUSER=${APP_NAME}"
 Environment="DBPASS=${DB_PASSWORD}"
+# in dev env it can be ok to disable SSL mode but in prod it is another story
+# it depends on various factor. is your service (go) running in the same host as the db (localhost ?)
+# if not, is the network between your server and your db trusted ?? read the doc and ask your security officer:
+# https://www.postgresql.org/docs/11/libpq-ssl.html#LIBPQ-SSL-PROTECTION
+Environment="DB_SSL_MODE=disabled"
 EOS
 
 

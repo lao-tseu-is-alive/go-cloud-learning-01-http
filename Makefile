@@ -6,7 +6,7 @@ export $(shell sed 's/=.*//' .env)
 #the name of your API
 APP=todos
 EXECUTABLE=$(APP)Server
-APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSL_MODE)
 # using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
 # here with the docker file so no need to install it
 # MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/db/migrations/ -database "$(APP_DSN)"
