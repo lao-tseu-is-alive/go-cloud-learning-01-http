@@ -53,7 +53,6 @@ func GetStorageInstance(dbDriver, dbConnectionString string, log *log.Logger) (S
 			return nil, fmt.Errorf("error opening memory store: %s", err)
 		}
 	default:
-		log.Fatalf("error : unsupported dbDriver: %s ", dbDriver)
 		return nil, errors.New("unsupported DB driver type")
 
 	}

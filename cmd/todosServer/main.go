@@ -1,11 +1,16 @@
 package main
 
 import (
+	"embed"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/internal/todos"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/pkg/config"
+	"io/fs"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -22,6 +27,7 @@ const (
 	*/
 	defaultDBSslMode = "disable"
 	defaultDBDriver  = "postgres"
+	webRootDir       = "./web/dist"
 	/*
 		shutDownTimeout     = 2 * time.Second // number of second to wait before closing server
 		defaultReadTimeout  = 2 * time.Minute
@@ -30,14 +36,52 @@ const (
 	*/
 )
 
+/*
+//go:embed ./web/dist
+
+*/
+var embededFiles embed.FS
+
+func getFileSystem(useOS bool, log *log.Logger) http.FileSystem {
+	if useOS {
+		log.Println("using live mode")
+		return http.FS(os.DirFS("dist"))
+	}
+
+	log.Println("using embed mode")
+	fsys, err := fs.Sub(embededFiles, "dist")
+	if err != nil {
+		panic(err)
+	}
+
+	return http.FS(fsys)
+}
+
 // GetNewServer initialize a new Echo server and returns it
-func GetNewServer(l *log.Logger, store todos.Storage) *echo.Echo {
+func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 	e := echo.New()
+	e.Use(middleware.CORS())
 	myTodosApi := todos.Service{
 		Log:   l,
 		Store: store,
 	}
+	if useOS {
+		webRootDirPath, err := filepath.Abs(webRootDir)
+		if err != nil {
+			log.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
+		}
+		if _, err := os.Stat(webRootDirPath); os.IsNotExist(err) {
+			log.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
+		}
+		log.Printf("using live mode serving from %s", webRootDirPath)
+		e.Static("/", webRootDirPath)
+	} else {
+		assetHandler := http.FileServer(http.FS(embededFiles))
+		e.GET("/", echo.WrapHandler(assetHandler))
+		//e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", assetHandler)))
+	}
 
+	//
 	todos.RegisterHandlers(e, &myTodosApi)
 	// add a route for maxId
 	e.GET("/todos/maxid", myTodosApi.GetMaxId)
@@ -48,6 +92,10 @@ func GetNewServer(l *log.Logger, store todos.Storage) *echo.Echo {
 func main() {
 	//l := log.New(ioutil.Discard, appName, 0)
 	l := log.New(os.Stdout, appName, log.Ldate|log.Ltime|log.Lshortfile)
+
+	//useOS := len(os.Args) > 1 && os.Args[1] == "live"
+	//  do not use embeded for now because it is not working yet
+	useOS := true
 
 	listenAddress, err := config.GetListenAddrFromEnv(defaultServerIp, defaultServerPort)
 	if err != nil {
@@ -74,7 +122,7 @@ func main() {
 	}
 	defer s.Close()
 
-	e := GetNewServer(l, s)
+	e := GetNewServer(useOS, l, s)
 
 	e.Logger.Fatal(e.Start(listenAddress))
 }
