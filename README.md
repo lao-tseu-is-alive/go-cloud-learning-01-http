@@ -1,5 +1,7 @@
 # go-cloud-learning-01-http
-From zero to hero : Learning how to build your first web server in Golang
+From zero to hero : Learning how to build your first «Todos» api server in Go.
+
+
 
 ## Requirements
  1. Have access to a Linux Ubuntu 20.04 box or VM 
@@ -13,10 +15,26 @@ This project uses the Standard Go Project Layout : https://github.com/golang-sta
 
 ## Where do I start ?
 1. just clone this repo in you Linux Box : git clone https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http.git
-2. cd into the cloned repo directory and jump directly to cmd/00-http
-3. have a look to the code  in main.go file
-4. just run it : **go run main.go**
-5. hack-it, modify-it and have fun !
+2. cd into the cloned repo directory
+3. install all required dependencies with :  **go get -d ./...**
+4. then jump directly to your first example in [cmd/00-http-basic](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/tree/main/cmd/00-http-basic)
+5. have a look to the code  in main.go file
+6. just run it : **go run main.go**
+7. hack-it, modify-it and have fun !
+8. Follow along with the other 3 examples in cmd directory:
+   1. [01-http-envconfig-template-parameter](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/tree/main/cmd/01-http-envconfig-template-parameter) : *learn how to use env variables for config and reading a parameter*
+   2. [02-http-refactor-graceful-shutdown](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/tree/main/cmd/02-http-refactor-graceful-shutdown) : *learn about using a logger and code like a pro implementing «graceful» shutdown* 
+   3. [03-http-json-todo](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/tree/main/cmd/03-http-json-todo) : *implement a basic "todos" API using [Echo](https://echo.labstack.com/) micro framework*.
+9.When you are ready, jump to the main example of this TODOS Api Server
+
+## Main example is a template Go project
+You can use this repository as a base template for your future projects. The main features are :
++ A Makefile with more than 14 ready to use sub-commands _(you can try : **make help**)_.    
++ [Echo](https://echo.labstack.com/) : *High performance, extensible, minimalist Go web framework*
++ Contract based development using [OpenAPI 3](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.0.md), *(also called swagger in the past)*.
++ Go server code generation using [oapi-codegen](https://github.com/deepmap/oapi-codegen)
++ Database migration using :[golang-migrate](https://github.com/golang-migrate/migrate)
++ Table Driven Testing 
 
 ## Useful Links
 - [Golang.org : home for the official project](https://golang.org/)
