@@ -68,7 +68,8 @@ func NewPgxDB(dbConnectionString string, maxConnectionsInPool int, log *log.Logg
 			log.Fatalf("database error scanning todos query : %s", errTodosTable)
 		}
 
-		log.Printf("SUCCESS Connecting to Postgres version : [%s]", version)
+		log.Printf("SUCCESS Connected to Postgres DB ver: [%s]", version)
+		log.Printf("SUCCESS database contains %d records in todos", numberOfTodos)
 	}
 
 	psql.Conn = connPool

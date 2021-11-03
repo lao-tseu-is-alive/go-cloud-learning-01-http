@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/internal/todos"
@@ -36,6 +37,11 @@ const (
 	*/
 )
 
+// VERSION  the current version of the application is evaluated at build time based on your git tag.
+var VERSION = "0.0.0"
+var GitRevision = "unknown"
+var BuildStamp = "unknown"
+
 /*
 //go:embed ./web/dist
 
@@ -60,6 +66,7 @@ func getFileSystem(useOS bool, log *log.Logger) http.FileSystem {
 // GetNewServer initialize a new Echo server and returns it
 func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 	e := echo.New()
+	e.HideBanner = true
 	e.Use(middleware.CORS())
 	myTodosApi := todos.Service{
 		Log:   l,
@@ -68,12 +75,12 @@ func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 	if useOS {
 		webRootDirPath, err := filepath.Abs(webRootDir)
 		if err != nil {
-			log.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
+			l.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
 		}
 		if _, err := os.Stat(webRootDirPath); os.IsNotExist(err) {
-			log.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
+			l.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
 		}
-		log.Printf("using live mode serving from %s", webRootDirPath)
+		l.Printf("Using live mode serving from %s", webRootDirPath)
 		e.Static("/", webRootDirPath)
 	} else {
 		assetHandler := http.FileServer(http.FS(embededFiles))
@@ -88,8 +95,13 @@ func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 	return e
 }
 
+func GetVersion() string {
+	return fmt.Sprintf("%s Ver: %s, Build: %s, rev: %s ", appName, VERSION, BuildStamp, GitRevision)
+}
+
 // main is the entry point of your todos Api TodosService service
 func main() {
+	fmt.Printf("## Starting Go %s \n", GetVersion())
 	//l := log.New(ioutil.Discard, appName, 0)
 	l := log.New(os.Stdout, appName, log.Ldate|log.Ltime|log.Lshortfile)
 
@@ -99,12 +111,12 @@ func main() {
 
 	listenAddress, err := config.GetListenAddrFromEnv(defaultServerIp, defaultServerPort)
 	if err != nil {
-		log.Fatalf("error doing config.GetListenAddrFromEnv. error: %v", err)
+		log.Fatalf("💥💥 error doing config.GetListenAddrFromEnv. error: %v\n", err)
 	}
 
 	driver := config.GetDbDriverFromEnv(defaultDBDriver)
 	if !todos.IsDriverSupported(driver) {
-		log.Fatalf("error the driver : %s is not supported yet.\n", driver)
+		log.Fatalf("💥💥 error the driver : %s is not supported yet.\n", driver)
 	}
 
 	var dbDsn = ""
@@ -112,17 +124,17 @@ func main() {
 		dbDsn, err = config.GetPgDbDsnUrlFromEnv(defaultDBIp, defaultDBPort,
 			appName, appName, defaultDBPassword, defaultDBSslMode)
 		if err != nil {
-			log.Fatalf("error doing config.GetPgDbDsnUrlFromEnv. error: %v", err)
+			log.Fatalf("💥💥 error doing config.GetPgDbDsnUrlFromEnv. error: %v\n", err)
 		}
 	}
 
 	s, err := todos.GetStorageInstance(driver, dbDsn, l)
 	if err != nil {
-		l.Fatalf("error getting Storage Instance for driver %s. error: %v", driver, err)
+		l.Fatalf("💥💥 error getting Storage Instance for driver %s. error: %v\n", driver, err)
 	}
 	defer s.Close()
 
 	e := GetNewServer(useOS, l, s)
-
+	l.Printf("Will start http server ««%s»», listening on: %s \n", GetVersion(), listenAddress)
 	e.Logger.Fatal(e.Start(listenAddress))
 }

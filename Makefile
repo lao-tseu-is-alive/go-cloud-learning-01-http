@@ -6,6 +6,11 @@ export $(shell sed 's/=.*//' .env)
 #the name of your API
 APP=todos
 EXECUTABLE=$(APP)Server
+VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || echo "0.0.0_alpha")
+REVISION ?= $(shell git rev-list -1 HEAD)
+BUILD ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
+LDFLAGS := -ldflags "-X main.VERSION=${VERSION} -X main.GitRevision=${REVISION} -X main.BuildStamp=${BUILD}"
+PID_FILE := "./$(APP).pid"
 APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSL_MODE)
 # using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
 # here with the docker file so no need to install it
@@ -26,9 +31,21 @@ openapi-codegen:
 	oapi-codegen -generate server -o internal/todos/todo_server.gen.go -package todos api/todos.yml
 
 .PHONY: run
-## run:	will compile your server app binary and place it in the bin sub-folder
+## run:	will run a temporary version of your Go application
 run:
-	go run cmd/$(EXECUTABLE)/main.go
+	go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go
+
+.PHONY: run-restart
+run-restart: ## restart the API server
+	@pkill -P `cat $(PID_FILE)` || true
+	@printf '%*s\n' "80" '' | tr ' ' -
+	@echo "Source file changed. Restarting server..."
+	@go run ${LDFLAGS} cmd/server/main.go & echo $$! > $(PID_FILE)
+	@printf '%*s\n' "80" '' | tr ' ' -
+
+run-live: ## run the API server with live reload support (requires fswatch)
+	@go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go & echo $$! > $(PID_FILE)
+	@fswatch -x -o --event Created --event Updated --event Renamed -r internal pkg cmd config | xargs -n1 -I {} make run-restart
 
 .PHONY: build
 ## build:	will compile your server app binary and place it in the bin sub-folder
