@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -101,7 +102,14 @@ func GetVersion() string {
 
 // main is the entry point of your todos Api TodosService service
 func main() {
-	fmt.Printf("## Starting Go %s \n", GetVersion())
+	displayVersion := flag.Bool("version", false, "display version and terminated")
+	if *displayVersion {
+		fmt.Printf("%s\n", GetVersion())
+		os.Exit(0)
+	} else {
+		fmt.Printf("## Starting Go %s \n", GetVersion())
+	}
+
 	//l := log.New(ioutil.Discard, appName, 0)
 	l := log.New(os.Stdout, appName, log.Ldate|log.Ltime|log.Lshortfile)
 

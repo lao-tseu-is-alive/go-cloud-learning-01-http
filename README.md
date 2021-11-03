@@ -35,6 +35,7 @@ You can use this repository as a base template for your future projects. The mai
 + Go server code generation using [oapi-codegen](https://github.com/deepmap/oapi-codegen)
 + Database migration using :[golang-migrate](https://github.com/golang-migrate/migrate)
 + Table Driven Testing 
++ Live reload  with **make   [fswatch](https://github.com/emcrisostomo/fswatch)
 
 ## Useful Links
 - [Golang.org : home for the official project](https://golang.org/)

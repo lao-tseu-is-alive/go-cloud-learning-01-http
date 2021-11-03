@@ -6,6 +6,9 @@ export $(shell sed 's/=.*//' .env)
 #the name of your API
 APP=todos
 EXECUTABLE=$(APP)Server
+# The version is based on your git tags, when you're ready make a new tag and push it to github et voila !
+# git tag -a v0.1.0 -m "v0.1.0"
+# git push origin main --tags
 VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || echo "0.0.0_alpha")
 REVISION ?= $(shell git rev-list -1 HEAD)
 BUILD ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
@@ -22,6 +25,11 @@ MIGRATE=/usr/local/bin/migrate -database "$(APP_DSN)" -path=db/migrations/
 # Make is verbose in Linux. Make it silent.
 MAKEFLAGS += --silent
 
+# check we have a couple of dependencies
+dependencies:
+	@command -v fswatch --version >/dev/null 2>&1 || { printf >&2 "fswatch is not installed, please run: brew install fswatch\n"; exit 1; }
+	@command -v go-bindata >/dev/null 2>&1 || { printf >&2 "go-bindata is not installed, please run: go get github.com/jteeuwen/go-bindata/...\n"; exit 1; }
+
 
 # for reason to use .Phony see : https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: openapi
@@ -31,19 +39,24 @@ openapi-codegen:
 	oapi-codegen -generate server -o internal/todos/todo_server.gen.go -package todos api/todos.yml
 
 .PHONY: run
-## run:	will run a temporary version of your Go application
+## run:	will run a dev version of your Go application
 run:
 	go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go
 
 .PHONY: run-restart
-run-restart: ## restart the API server
+# run-restart:	DO NOT USE will restart your server USE instead  : make run-live-reload
+run-restart:
 	@pkill -P `cat $(PID_FILE)` || true
 	@printf '%*s\n' "80" '' | tr ' ' -
-	@echo "Source file changed. Restarting server..."
-	@go run ${LDFLAGS} cmd/server/main.go & echo $$! > $(PID_FILE)
+	@echo "Your code has changed. Will restart the server..."
+	@go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go & echo $$! > $(PID_FILE)
 	@printf '%*s\n' "80" '' | tr ' ' -
 
-run-live: ## run the API server with live reload support (requires fswatch)
+
+# you can find instructions on fswatch here : https://github.com/emcrisostomo/fswatch
+.PHONY: run-live-reload
+## run-live-reload: 	will run a dev version of your Go application with «live» ️reload 👍 😃 😋 (requires fswatch on your box)
+run-live-reload:
 	@go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go & echo $$! > $(PID_FILE)
 	@fswatch -x -o --event Created --event Updated --event Renamed -r internal pkg cmd config | xargs -n1 -I {} make run-restart
 
@@ -115,19 +128,19 @@ db-docker-migrate-new:
 	$(MIGRATE) create -ext sql -dir db/migrations/ $${name// /_}
 
 .PHONY: db-docker-migrate-up
-## db-docker-migrate-up: run all new database migrations
+## db-docker-migrate-up: 	run all new database migrations
 db-docker-migrate-up: db-docker-start db-docker-is-ready
 	@echo "Running all new database migrations..."
 	@$(MIGRATE) up
 
 .PHONY: db-docker-migrate-down
-## db-docker-migrate-up: revert database to the last migration step
+## db-docker-migrate-down: 	revert database to the last migration step
 db-docker-migrate-down:
 	@echo "Running all new database migrations..."
 	@$(MIGRATE) down 1
 
 .PHONY: db-docker-migrate-reset
-## db-docker-migrate-reset:	 reset database and re-run all migrations
+## db-docker-migrate-reset:	reset database and re-run all migrations
 db-docker-migrate-reset:
 	@echo "Resetting database..."
 	@$(MIGRATE) drop
