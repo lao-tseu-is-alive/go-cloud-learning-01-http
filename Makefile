@@ -26,7 +26,7 @@ openapi-codegen:
 	oapi-codegen -generate server -o internal/todos/todo_server.gen.go -package todos api/todos.yml
 
 .PHONY: run
-## build:	will compile your server app binary and place it in the bin sub-folder
+## run:	will compile your server app binary and place it in the bin sub-folder
 run:
 	go run cmd/$(EXECUTABLE)/main.go
 

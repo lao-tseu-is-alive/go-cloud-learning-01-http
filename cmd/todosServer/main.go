@@ -81,9 +81,9 @@ func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 		//e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", assetHandler)))
 	}
 
-	//
+	// here the routes defined in OpenApi todos.yaml are registered
 	todos.RegisterHandlers(e, &myTodosApi)
-	// add a route for maxId
+	// add another route for maxId
 	e.GET("/todos/maxid", myTodosApi.GetMaxId)
 	return e
 }
@@ -94,7 +94,7 @@ func main() {
 	l := log.New(os.Stdout, appName, log.Ldate|log.Ltime|log.Lshortfile)
 
 	//useOS := len(os.Args) > 1 && os.Args[1] == "live"
-	//  do not use embeded for now because it is not working yet
+	// we cannot use embeded for now because it is not working yet
 	useOS := true
 
 	listenAddress, err := config.GetListenAddrFromEnv(defaultServerIp, defaultServerPort)
