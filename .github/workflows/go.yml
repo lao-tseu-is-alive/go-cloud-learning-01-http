@@ -1,0 +1,48 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14.0
+        env:
+          POSTGRES_USER: todos
+          POSTGRES_PASSWORD: todos_password
+          POSTGRES_DB: todos
+        ports:
+          - 5432/tcp
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      env:
+          APP_DSN: postgres://127.0.0.1:${{ job.services.postgres.ports[5432] }}/go_restful?sslmode=disable&user=postgres&password=postgres
+      run: |
+          make db-docker-init-data
+          make test
+          
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-all.out
+
