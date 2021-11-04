@@ -1,7 +1,12 @@
 #!make
-include .env
-# next line allows to export env variables to external process (like your Go app)
-export $(shell sed 's/=.*//' .env)
+ifneq ("$(wildcard $(.env))","")
+	ENV_EXISTS = 1
+	include .env
+	# next line allows to export env variables to external process (like your Go app)
+	export $(shell sed 's/=.*//' .env)
+else
+	ENV_EXISTS = 0
+endif
 
 #the name of your API
 APP=todos
