@@ -20,3 +20,6 @@
 /bin/todosServer
 /scripts/todos.conf_local
 /todos.conf
+/todos.pid
+/coverage.txt
+/bin/codecov

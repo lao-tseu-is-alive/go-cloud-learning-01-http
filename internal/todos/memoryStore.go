@@ -2,6 +2,7 @@ package todos
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"time"
 )
@@ -46,9 +47,14 @@ func (m *memoryStore) List(offset, limit int) ([]*Todo, error) {
 	} else {
 		if limit > len(m.Todos) {
 			//return all
+			keys := make([]int, 0, len(m.Todos))
+			for k := range m.Todos {
+				keys = append(keys, int(k))
+			}
+			sort.Ints(keys)
 
-			for _, value := range m.Todos {
-				res = append(res, value)
+			for _, k := range keys {
+				res = append(res, m.Todos[int32(k)])
 			}
 		}
 	}

@@ -38,7 +38,7 @@ func GetPgDbDsnUrlFromEnv(defaultIP string, defaultPort int,
 		if srvPort < 1 || srvPort > 65535 {
 			return "", &ErrorConfig{
 				err: err,
-				msg: "ERROR: CONFIG ENV PORT should contain an integer between 1 and 65535",
+				msg: "ERROR: CONFIG ENV DB_PORT should contain an integer between 1 and 65535",
 			}
 		}
 	}

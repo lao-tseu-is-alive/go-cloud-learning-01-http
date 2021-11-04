@@ -53,19 +53,20 @@ func NewPgxDB(dbConnectionString string, maxConnectionsInPool int, log *log.Logg
 	if err != nil {
 		successOrFailure = "FAILED"
 		log.Printf("Connecting to database %s with user %s : %s \n", dbName, dbUser, successOrFailure)
-		log.Fatalf("ERROR TRYING DB CONNECTION : %v ", err)
+		return nil, errors.New(fmt.Sprintf("error connecting to database. err : %s", err))
 	} else {
 		log.Printf("Connected to database %s with user %s : %s \n", dbName, dbUser, successOrFailure)
 		// let's first check that we can really make a query by querying the postgres version
 		var version string
 		if errPing := connPool.QueryRow(context.Background(), getPGVersion).Scan(&version); errPing != nil {
-			log.Printf("Connection is invalid ! ")
+			log.Printf("connection is invalid ! ")
 			log.Fatalf("DB ERROR scanning row: %s", errPing)
+			return nil, errPing
 		}
 		var numberOfTodos int
 		if errTodosTable := connPool.QueryRow(context.Background(), todosCount).Scan(&numberOfTodos); errTodosTable != nil {
-			log.Printf("but the database does not contain the table «todos»  ! ")
-			log.Fatalf("database error scanning todos query : %s", errTodosTable)
+			log.Printf("the database does not contain the table «todos»  ! ")
+			return nil, errors.New("database does not contain the table «todos»")
 		}
 
 		log.Printf("SUCCESS Connected to Postgres DB ver: [%s]", version)

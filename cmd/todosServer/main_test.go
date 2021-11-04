@@ -210,7 +210,7 @@ func Test_goTodoServer_TodosMemory(t *testing.T) {
 	// any value that satisfies the net/http Handler interface.
 	l := log.New(ioutil.Discard, appName, 0)
 	InitialDB, _ := todos.GetStorageInstance("memory", "", l)
-	myServer := GetNewServer(l, InitialDB)
+	myServer := GetNewServer(true, l, InitialDB)
 	ts := httptest.NewServer(myServer)
 	defer ts.Close()
 
@@ -283,10 +283,10 @@ func Test_goTodoServer_TodosPostgres(t *testing.T) {
 
 	InitialDB, err := todos.GetStorageInstance("postgres", dbDsn, l)
 	if err != nil {
-		panic(fmt.Sprintf("error getting storage. is postgres available ? error : %v ", err))
+		t.Fatalf(fmt.Sprintf("error getting storage. is postgres available ? error : %v ", err))
 	}
 	defer InitialDB.Close()
-	myServer := GetNewServer(l, InitialDB)
+	myServer := GetNewServer(true, l, InitialDB)
 	ts := httptest.NewServer(myServer)
 	defer ts.Close()
 

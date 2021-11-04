@@ -12,6 +12,7 @@ EXECUTABLE=$(APP)Server
 VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || echo "0.0.0_alpha")
 REVISION ?= $(shell git rev-list -1 HEAD)
 BUILD ?= $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
+PACKAGES := $(shell go list ./... | grep -v /vendor/)
 LDFLAGS := -ldflags "-X main.VERSION=${VERSION} -X main.GitRevision=${REVISION} -X main.BuildStamp=${BUILD}"
 PID_FILE := "./$(APP).pid"
 APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSL_MODE)
@@ -26,17 +27,41 @@ MIGRATE=/usr/local/bin/migrate -database "$(APP_DSN)" -path=db/migrations/
 MAKEFLAGS += --silent
 
 # check we have a couple of dependencies
-dependencies:
-	@command -v fswatch --version >/dev/null 2>&1 || { printf >&2 "fswatch is not installed, please run: brew install fswatch\n"; exit 1; }
-	@command -v go-bindata >/dev/null 2>&1 || { printf >&2 "go-bindata is not installed, please run: go get github.com/jteeuwen/go-bindata/...\n"; exit 1; }
+.PHONY: dependencies-openapi
+dependencies-openapi:
+	@command -v oapi-codegen >/dev/null 2>&1 || { printf >&2 "oapi-codegen is not installed, please run: go get github.com/jteeuwen/go-bindata/...\n"; exit 1; }
+
+.PHONY: dependencies-fswatch
+dependencies-fswatch:
+	@command -v fswatch --version >/dev/null 2>&1 || { printf >&2 "fswatch is not installed, install it to be able to use 'make run-hot-reload'\n"; exit 1; }
+
 
 
 # for reason to use .Phony see : https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: openapi
+.PHONY: openapi-codegen
 ## openapi-codegen:	will generate helper Go code for types & server based on OpenApi spec in api/app.yml
-openapi-codegen:
+openapi-codegen: dependencies-openapi
 	oapi-codegen -generate types -o internal/todos/todo_types.gen.go -package todos api/todos.yml
 	oapi-codegen -generate server -o internal/todos/todo_server.gen.go -package todos api/todos.yml
+
+.PHONY: lint
+## lint:	run golint on all your Go package
+lint:
+	@golint $(PACKAGES)
+
+
+.PHONY: test
+## test:	will run unit tests for all your Go code
+test:
+	@echo "mode: count" > coverage-all.out
+	@$(foreach pkg,$(PACKAGES), \
+		go test -p=1 -cover -covermode=count -coverprofile=coverage.out ${pkg}; \
+		tail -n +2 coverage.out >> coverage-all.out;)
+
+.PHONY: test-cover
+## test-cover:	will run all unit tests and show test coverage information
+test-cover: test
+	go tool cover -html=coverage-all.out
 
 .PHONY: run
 ## run:	will run a dev version of your Go application
@@ -54,9 +79,9 @@ run-restart:
 
 
 # you can find instructions on fswatch here : https://github.com/emcrisostomo/fswatch
-.PHONY: run-live-reload
-## run-live-reload: 	will run a dev version of your Go application with «live» ️reload 👍 😃 😋 (requires fswatch on your box)
-run-live-reload:
+.PHONY: run-hot-reload
+## run-hot-reload: 	will run a dev version of your Go application with «live» ️reload 👍 😃 😋 (requires fswatch on your box)
+run-hot-reload: dependencies-fswatch
 	@go run ${LDFLAGS} cmd/$(EXECUTABLE)/main.go & echo $$! > $(PID_FILE)
 	@fswatch -x -o --event Created --event Updated --event Renamed -r internal pkg cmd config | xargs -n1 -I {} make run-restart
 
@@ -122,7 +147,7 @@ db-docker-delete: db-docker-stop
 	docker rm go-$(APP)-postgres
 
 .PHONY: db-docker-migrate-new
-## db-docker-migrate-new:	create a new database migration
+## db-docker-migrate-new:	create a new database migration using https://github.com/golang-migrate/migrate
 db-docker-migrate-new:
 	@read -p "Enter the name of the new migration: " name; \
 	$(MIGRATE) create -ext sql -dir db/migrations/ $${name// /_}

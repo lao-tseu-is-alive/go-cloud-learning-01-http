@@ -29,7 +29,7 @@ const (
 	*/
 	defaultDBSslMode = "disable"
 	defaultDBDriver  = "postgres"
-	webRootDir       = "./web/dist"
+	webRootDir       = "swagger-ui"
 	/*
 		shutDownTimeout     = 2 * time.Second // number of second to wait before closing server
 		defaultReadTimeout  = 2 * time.Minute
@@ -76,10 +76,10 @@ func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 	if useOS {
 		webRootDirPath, err := filepath.Abs(webRootDir)
 		if err != nil {
-			l.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
+			log.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
 		}
 		if _, err := os.Stat(webRootDirPath); os.IsNotExist(err) {
-			l.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
+			log.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
 		}
 		l.Printf("Using live mode serving from %s", webRootDirPath)
 		e.Static("/", webRootDirPath)
