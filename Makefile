@@ -6,6 +6,13 @@ ifneq ("$(wildcard $(.env))","")
 	export $(shell sed 's/=.*//' .env)
 else
 	ENV_EXISTS = 0
+	DB_DRIVER=postgres
+	DB_HOST=127.0.0.1
+	DB_PORT=5432
+	DB_NAME=todos
+	DB_USER=todos
+	DB_PASSWORD=todos_password
+	DB_SSL_MODE=disable
 endif
 
 #the name of your API
@@ -118,7 +125,7 @@ db-docker-start:
 	(echo "  >  Started your postgresql container on port ${DB_HOST}:${DB_PORT}..."; \
 	docker run --name go-$(APP)-postgres \
 	-v $(shell pwd)/test/data:/testdata  \
-	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_HOST):$(DB_PORT):5432 postgres \
+	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_HOST):$(DB_PORT):5432 postgres:14.0 \
 	)
 
 
