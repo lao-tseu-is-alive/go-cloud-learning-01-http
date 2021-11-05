@@ -1,17 +1,17 @@
 #!make
 ifneq ("$(wildcard $(.env))","")
-	ENV_EXISTS = 1
+	ENV_EXISTS = "TRUE"
 	include .env
 	# next line allows to export env variables to external process (like your Go app)
 	export $(shell sed 's/=.*//' .env)
 else
-	ENV_EXISTS = 0
+	ENV_EXISTS = "FALSE"
 	DB_DRIVER=postgres
 	DB_HOST=127.0.0.1
 	DB_PORT=5432
 	DB_NAME=todos
 	DB_USER=todos
-	DB_PASSWORD=todos_password
+	# DB_PASSWORD should be defined in your env or in github secrets
 	DB_SSL_MODE=disable
 endif
 
@@ -28,12 +28,15 @@ PACKAGES := $(shell go list ./... | grep -v /vendor/)
 LDFLAGS := -ldflags "-X main.VERSION=${VERSION} -X main.GitRevision=${REVISION} -X main.BuildStamp=${BUILD}"
 PID_FILE := "./$(APP).pid"
 APP_DSN=$(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSL_MODE)
-# using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
-# here with the docker file so no need to install it
-# MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/db/migrations/ -database "$(APP_DSN)"
-# or download your release from here : https://github.com/golang-migrate/migrate/releases
-# for ubuntu & debian : wget https://github.com/golang-migrate/migrate/releases/download/v4.15.1/migrate.linux-amd64.deb
-MIGRATE=/usr/local/bin/migrate -database "$(APP_DSN)" -path=db/migrations/
+ifeq ($(ENV_EXISTS),"TRUE")
+	# or download your release from here : https://github.com/golang-migrate/migrate/releases
+	# for ubuntu & debian : wget https://github.com/golang-migrate/migrate/releases/download/v4.15.1/migrate.linux-amd64.deb
+	MIGRATE=/usr/local/bin/migrate -database "$(APP_DSN)" -path=db/migrations/
+else
+	# using golang-migrate https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
+	# here with the docker file so no need to install it
+	MIGRATE := docker run -v $(shell pwd)/db/migrations:/migrations --network host migrate/migrate:v4.10.0 -path=/db/migrations/ -database "$(APP_DSN)"
+endif
 
 # Make is verbose in Linux. Make it silent.
 MAKEFLAGS += --silent
