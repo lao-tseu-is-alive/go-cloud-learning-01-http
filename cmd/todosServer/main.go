@@ -29,7 +29,7 @@ const (
 	*/
 	defaultDBSslMode = "disable"
 	defaultDBDriver  = "postgres"
-	webRootDir       = "swagger-ui"
+	webRootDir       = "cmd/todosServer/swagger-ui"
 	/*
 		shutDownTimeout     = 2 * time.Second // number of second to wait before closing server
 		defaultReadTimeout  = 2 * time.Minute

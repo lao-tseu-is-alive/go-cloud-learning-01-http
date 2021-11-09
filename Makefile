@@ -1,5 +1,5 @@
 #!make
-ifneq ("$(wildcard $(.env))","")
+ifneq ("$(wildcard .env)","")
 	ENV_EXISTS = "TRUE"
 	include .env
 	# next line allows to export env variables to external process (like your Go app)
@@ -14,7 +14,8 @@ else
 	# DB_PASSWORD should be defined in your env or in github secrets
 	DB_SSL_MODE=disable
 endif
-
+# line above can be used to debug the value of env variable
+#$(info $$ENV_EXISTS = $(ENV_EXISTS) )
 #the name of your API
 APP=todos
 EXECUTABLE=$(APP)Server
@@ -50,6 +51,12 @@ dependencies-openapi:
 dependencies-fswatch:
 	@command -v fswatch --version >/dev/null 2>&1 || { printf >&2 "fswatch is not installed, install it to be able to use 'make run-hot-reload'\n"; exit 1; }
 
+.PHONY: check-env
+check-env:
+ifndef DB_PASSWORD
+	# if this variable is not defined you cannot initialise the docker postgres db correctly
+	$(error DB_PASSWORD is undefined)
+endif
 
 
 # for reason to use .Phony see : https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
@@ -117,7 +124,7 @@ clean:
 
 .PHONY: db-docker-start
 ## db-docker-start:	start docker postgres server, create app user&db  in a container named go-$(APP)-postgres
-db-docker-start:
+db-docker-start: check-env
 	@mkdir -p test/data/postgres
 # docker container inspect call will set $? to 1 if container does not exist (cannot inspect) but
 # to 0 if it does exist (this respects stopped containers). So the run command will just be called
