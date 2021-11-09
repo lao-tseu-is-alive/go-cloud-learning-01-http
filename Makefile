@@ -114,8 +114,27 @@ build:
 	CGO_ENABLED=0 go build ${LDFLAGS} -a -o bin/$(EXECUTABLE) cmd/$(EXECUTABLE)/main.go
 
 .PHONY: build-docker
-build-docker: ## build the API server as a docker image
-	docker build -f cmd/server/Dockerfile -t server .
+## build-docker	will build a local Docker multi-stage image from your app
+build-docker:
+	docker build --tag todos-server:$(VERSION) .
+
+.PHONY: create-docker-network
+## create-docker-network	will build a local Docker network bridge for your app
+create-docker-network:
+	docker network create -d bridge todosnetwork
+
+
+.PHONY: run-docker
+## run-docker	will run your local Docker image with a local postgres
+run-docker: build-docker db-docker-init-data
+	docker run --rm  --env-file=.env --network todosnetwork -e DB_HOST=db  todos-server:$(VERSION)
+
+.PHONY: run-shell-docker
+## run-shell-docker	will run a shell in your local Docker image
+run-shell-docker: build-docker
+	docker run --rm -it todos-server:$(VERSION) sh
+
+
 
 .PHONY: clean
 ## clean:	will delete you server app binary and remove temporary files like coverage output
@@ -134,7 +153,7 @@ db-docker-start: check-env
 	docker container inspect go-$(APP)-postgres > /dev/null 2>&1 || \
 	(echo "  >  Started your postgresql container on port ${DB_HOST}:${DB_PORT}..."; \
 	docker run --name go-$(APP)-postgres \
-	-v $(shell pwd)/test/data:/testdata  \
+	-v $(shell pwd)/test/data:/testdata  --network todosnetwork --hostname db \
 	-e POSTGRES_USER=$(APP) -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(APP) -d -p $(DB_HOST):$(DB_PORT):5432 postgres:14.0 \
 	)
 
