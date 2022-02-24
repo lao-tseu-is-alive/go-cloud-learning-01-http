@@ -35,6 +35,7 @@ jobs:
 
     - name: Test
       env:
+        DB_PASSWORD: todo_password
         APP_DSN: postgres://127.0.0.1:${{ job.services.postgres.ports[5432] }}/todos?sslmode=disable&user=todos&password=todo_password
       run: |
         make db-docker-init-data
