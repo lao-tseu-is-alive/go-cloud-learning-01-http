@@ -1,6 +1,6 @@
 # Dockerfile References: https://docs.docker.com/engine/reference/builder/
 # Start from the latest golang base image
-FROM golang:latest as builder
+FROM golang:1-alpine3.15 as builder
 RUN apk --no-cache add ca-certificates git
 
 # Add Maintainer Info
@@ -21,11 +21,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build main.go todo_*.go -a -installsuffix cgo -o
 
 
 ######## Start a new stage from scratch #######
-FROM alpine:latest
+FROM alpine:3.15
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /root/
+RUN addgroup -g 10111 -S gouser && adduser -S -G gouser -H -u 10111 gouser
+USER gouser
+
+WORKDIR /goapp
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .

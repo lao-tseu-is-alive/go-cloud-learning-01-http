@@ -1,6 +1,4 @@
-# syntax=docker/dockerfile:1
-
-FROM golang:1.17-alpine as builder
+FROM golang:1-alpine3.15 as builder
 
 LABEL maintainer="cgil"
 
@@ -17,10 +15,15 @@ RUN git clone https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http.git
 
 RUN make build
 
-######## Start a new stage from scratch #######
-FROM alpine:latest
+######## Start a new stage  #######
+FROM alpine:3.15
 #
-WORKDIR /root/
+RUN apk --no-cache add ca-certificates
+
+RUN addgroup -g 10111 -S gouser && adduser -S -G gouser -H -u 10111 gouser
+USER gouser
+
+WORKDIR /goapp
 #
 ## Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/bin/todosServer .

@@ -19,6 +19,7 @@ func (e *ErrorConfig) Error() string {
 //GetListenAddrFromEnv returns a valid TCP/IP listening address string based on the values of environment variables :
 //	SERVERIP : string containing a valid Ip Address to use for listening (defaultIP will be used if env is not defined)
 //	PORT : int value between 1 and 65535 (defaultPort will be used if env is not defined)
+// in case the ENV variable PORT exists and contains an invalid integer the functions returns an empty string and an error
 func GetListenAddrFromEnv(defaultIP string, defaultPort int) (string, error) {
 	srvIP := defaultIP
 	srvPort := defaultPort
