@@ -16,7 +16,7 @@ jobs:
         image: postgres:14.0
         env:
           POSTGRES_USER: todos
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_PASSWORD:  todo_password
           POSTGRES_DB: todos
         ports:
           - 5432/tcp
@@ -35,7 +35,7 @@ jobs:
 
     - name: Test
       env:
-        APP_DSN: postgres://127.0.0.1:${{ job.services.postgres.ports[5432] }}/todos?sslmode=disable&user=todos&password=${{ secrets.DB_PASSWORD }}
+        APP_DSN: postgres://127.0.0.1:${{ job.services.postgres.ports[5432] }}/todos?sslmode=disable&user=todos&password=todo_password
       run: |
         make db-docker-init-data
         make test
