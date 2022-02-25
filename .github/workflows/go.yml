@@ -36,7 +36,7 @@ jobs:
     - name: Create schema Postgres DB
       env:
         DB_HOST: 127.0.0.1
-        DB_PORT: 5434
+        DB_PORT: 5432
         DB_NAME: todos
         DB_USER: todos
         DB_PASSWORD: todo_password
@@ -46,7 +46,7 @@ jobs:
     - name: Load data Postgres DB
       env:
           DB_HOST: 127.0.0.1
-          DB_PORT: 5434
+          DB_PORT: 5432
           DB_NAME: todos
           DB_USER: todos
           DB_PASSWORD: todo_password
