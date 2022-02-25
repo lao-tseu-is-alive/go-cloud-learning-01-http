@@ -40,7 +40,8 @@ jobs:
         DB_NAME: todos
         DB_USER: todos
         DB_PASSWORD: todo_password
-      run: psql -h localhost -p 5432 -d todos -U todos -f /testdata/create_todos_schema.sql
+        PGPASSWORD: postgres
+      run: psql -h localhost -p 5432 -d postgres -U postgres -f /testdata/create_todos_schema.sql
 
 
     - name: Load data Postgres DB
@@ -50,7 +51,8 @@ jobs:
           DB_NAME: todos
           DB_USER: todos
           DB_PASSWORD: todo_password
-      run: psql -h localhost -p 5432 -d todos -U todos -f /testdata/initial_todos_data.sql
+          PGPASSWORD: postgres
+      run: psql -h localhost -p 5432 -d postgres -U postgres -f /testdata/initial_todos_data.sql
 
     - name: Test
       env:
