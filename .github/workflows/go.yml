@@ -16,7 +16,7 @@ jobs:
         image: postgres:14.0
         env:
           POSTGRES_USER: todos
-          POSTGRES_PASSWORD:  todo_password
+          POSTGRES_PASSWORD: todo_password
           POSTGRES_DB: todos
         ports:
           - 5432/tcp
@@ -33,13 +33,30 @@ jobs:
     - name: Build
       run: make build
 
+    - name: Create schema Postgres DB
+      env:
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5434
+        DB_NAME: todos
+        DB_USER: todos
+        DB_PASSWORD: todo_password
+      run: psql "postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME" -f /testdata/create_todos_schema.sql
+
+
+    - name: Load data Postgres DB
+      env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5434
+          DB_NAME: todos
+          DB_USER: todos
+          DB_PASSWORD: todo_password
+      run: psql "postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME" -f /testdata/initial_todos_data.sql
+
     - name: Test
       env:
         DB_PASSWORD: todo_password
         APP_DSN: postgres://127.0.0.1:${{ job.services.postgres.ports[5432] }}/todos?sslmode=disable&user=todos&password=todo_password
-      run: |
-        make db-github-init-data
-        make test
+      run: make test
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
