@@ -1,4 +1,8 @@
 # go-cloud-learning-01-http
+
+[![codecov](https://codecov.io/gh/lao-tseu-is-alive/go-cloud-learning-01-http/branch/main/graph/badge.svg?token=PV0NWHUPMX)](https://codecov.io/gh/lao-tseu-is-alive/go-cloud-learning-01-http)
+[![test](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/actions/workflows/test.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http/actions/workflows/test.yml)
+
 From zero to hero : Learning how to build your first «Todos» api server in Go.
 
 

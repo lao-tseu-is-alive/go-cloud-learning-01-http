@@ -1,4 +1,4 @@
-name: Go
+name: test
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   # Label of the runner job
-  build:
+  test:
     # You must use a Linux environment when using service containers or container jobs
     runs-on: ubuntu-latest
     # Service containers to run with `builder` job
