@@ -14,6 +14,7 @@ jobs:
     # Service containers to run with `builder` job
     services:
       # Label used to access the service container
+      # https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
         # Docker Hub image
         image: postgres
@@ -38,22 +39,12 @@ jobs:
 
     - name: Create schema Postgres DB
       env:
-        DB_HOST: 127.0.0.1
-        DB_PORT: 5432
-        DB_NAME: todos
-        DB_USER: todos
-        DB_PASSWORD: todo_password
         PGPASSWORD: postgres
       run: psql -h localhost -p 5432 -d postgres -U postgres -f test/data/create_todos_schema.sql
 
 
     - name: Load data Postgres DB
       env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_NAME: todos
-          DB_USER: todos
-          DB_PASSWORD: todo_password
           PGPASSWORD: postgres
       run: psql -h localhost -p 5432 -d postgres -U postgres -f test/data/initial_todos_data.sql
 
