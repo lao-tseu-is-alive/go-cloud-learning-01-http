@@ -8,9 +8,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/internal/todos"
 	"github.com/lao-tseu-is-alive/go-cloud-learning-01-http/pkg/config"
-	"io/fs"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -50,23 +48,8 @@ var BuildStamp = "unknown"
 */
 var embededFiles embed.FS
 
-func getFileSystem(useOS bool, log *log.Logger) http.FileSystem {
-	if useOS {
-		log.Println("using live mode")
-		return http.FS(os.DirFS("dist"))
-	}
-
-	log.Println("using embed mode")
-	fsys, err := fs.Sub(embededFiles, "dist")
-	if err != nil {
-		panic(err)
-	}
-
-	return http.FS(fsys)
-}
-
 // GetNewServer initialize a new Echo server and returns it
-func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
+func GetNewServer(l *log.Logger, store todos.Storage) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.CORS())
@@ -74,21 +57,15 @@ func GetNewServer(useOS bool, l *log.Logger, store todos.Storage) *echo.Echo {
 		Log:   l,
 		Store: store,
 	}
-	if useOS {
-		webRootDirPath, err := filepath.Abs(webRootDir)
-		if err != nil {
-			log.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
-		}
-		if _, err := os.Stat(webRootDirPath); os.IsNotExist(err) {
-			log.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
-		}
-		l.Printf("Using live mode serving from %s", webRootDirPath)
-		e.Static("/", webRootDirPath)
-	} else {
-		assetHandler := http.FileServer(http.FS(embededFiles))
-		e.GET("/", echo.WrapHandler(assetHandler))
-		//e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", assetHandler)))
+	webRootDirPath, err := filepath.Abs(webRootDir)
+	if err != nil {
+		log.Fatalf("Problem getting absolute path of directory: %s\nError:\n%v\n", webRootDir, err)
 	}
+	if _, err := os.Stat(webRootDirPath); os.IsNotExist(err) {
+		log.Fatalf("The webRootDir parameter is wrong, %s is not a valid directory\nError:\n%v\n", webRootDirPath, err)
+	}
+	l.Printf("Using live mode serving from %s", webRootDirPath)
+	e.Static("/", webRootDirPath)
 
 	// here the routes defined in OpenApi todos.yaml are registered
 	todos.RegisterHandlers(e, &myTodosApi)
@@ -113,10 +90,6 @@ func main() {
 
 	//l := log.New(ioutil.Discard, appName, 0)
 	l := log.New(os.Stdout, appName, log.Ldate|log.Ltime|log.Lshortfile)
-
-	//useOS := len(os.Args) > 1 && os.Args[1] == "live"
-	// we cannot use embeded for now because it is not working yet
-	useOS := true
 
 	listenAddress, err := config.GetListenAddrFromEnv(defaultServerIp, defaultServerPort)
 	if err != nil {
@@ -143,7 +116,7 @@ func main() {
 	}
 	defer s.Close()
 
-	e := GetNewServer(useOS, l, s)
+	e := GetNewServer(l, s)
 	l.Printf("Will start http server ««%s»», listening on: %s \n", GetVersion(), listenAddress)
 	e.Logger.Fatal(e.Start(listenAddress))
 }
