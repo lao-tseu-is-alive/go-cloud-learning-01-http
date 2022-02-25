@@ -7,19 +7,22 @@ on:
     branches: [ main ]
 
 jobs:
-
+  # Label of the runner job
   build:
+    # You must use a Linux environment when using service containers or container jobs
     runs-on: ubuntu-latest
-
+    # Service containers to run with `builder` job
     services:
+      # Label used to access the service container
       postgres:
-        image: postgres:14.0
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
         env:
-          POSTGRES_USER: todos
-          POSTGRES_PASSWORD: todo_password
-          POSTGRES_DB: todos
+          POSTGRES_PASSWORD: postgres
         ports:
-          - 5432/tcp
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
