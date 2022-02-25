@@ -223,13 +223,13 @@ db-docker-init-data: db-docker-migrate-up
 .PHONY: db-github-migrate-up
 ## db-github-migrate-up: 	to be used in github actions to run all new database migrations
 db-github-migrate-up:
-	@echo "Running your database migrations..."
-	@$(MIGRATE) up
+	@echo "creating todos schema in your database ..."
+	docker exec -it postgres psql $(APP) -U $(APP) -f /testdata/create_todos_schema.sql
 
 
 .PHONY: db-github-init-data
 ## db-github-init-data:	to be used in github actions to load initial data in your app database
-db-github-init-data:
+db-github-init-data: db-github-migrate-up
 	@echo "  >  Loading initial data in your postgresql db... "
 	docker exec -it postgres psql $(APP) -U $(APP) -f /testdata/initial_todos_data.sql
 
