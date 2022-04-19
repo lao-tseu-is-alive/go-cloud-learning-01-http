@@ -65,4 +65,5 @@ and using your .env files to initialize the env variables.
 - [My golang learning](https://github.com/lao-tseu-is-alive/golang-learning)
 - [Why you should try Go as a PHP Developer(YouTube video)](https://www.youtube.com/watch?v=Mjcw8fHdx8Q)
 - [How I write HTTP services after eight years by Mat Ryer](https://pace.dev/blog/2018/05/09/how-I-write-http-services-after-eight-years.html)
-- [Alternate OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator) 
+- [Alternate OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator)
+- [How to build and deploy a simple Golang app on K8s without docker](https://github.com/lao-tseu-is-alive/go-cloud-k8s-info)
