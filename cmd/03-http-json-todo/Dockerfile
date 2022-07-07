@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build main.go todo_*.go -a -installsuffix cgo -o
 
 
 ######## Start a new stage from scratch #######
-FROM alpine:3.15
+FROM alpine:3.16
 
 RUN apk --no-cache add ca-certificates
 
