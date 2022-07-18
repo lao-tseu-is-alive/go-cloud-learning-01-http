@@ -16,7 +16,7 @@ RUN git clone https://github.com/lao-tseu-is-alive/go-cloud-learning-01-http.git
 RUN make build
 
 ######## Start a new stage  #######
-FROM alpine:3.15
+FROM alpine:3.16
 #
 RUN apk --no-cache add ca-certificates
 
